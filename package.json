@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/bobeu/brothersFinance/issues"
   },
-  "homepage": "https://github.com/bobeu/brothersFinance#readme"
+  "homepage": "https://github.com/bobeu/brothersFinance#readme",
+  "dependencies": {
+    "openzeppelin-solidity": "^4.1.0"
+  }
 }
