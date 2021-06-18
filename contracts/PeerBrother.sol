@@ -6,6 +6,7 @@ import "openzeppelin-solidity/contracts/utils/Context.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 
 import './BroToken.sol';
 
@@ -22,7 +23,7 @@ interface BUSD {
 
                     // =====>BRO TOKEN IMPLEMENTATION<=======================================================
 
-contract SafeBROsToken is ERC20, Ownable {
+contract SafeBROsToken is ERC20, Ownable, AccessControl {
 
     using SafeMath for uint256;
 
@@ -222,12 +223,16 @@ contract SafeBROsToken is ERC20, Ownable {
 contract PeerBrothers is SafeBROsToken {
 
     using SafeMath for uint256;
+
+    enum Status { Zeroed, WaitListed, Approved }
     
     event Deposit(address indexed brother, uint amount);
     
     event Received(address indexed brother, uint amount);
 
     event PenaltyChanged(address bigBro, uint oldRate, uint newRate);
+
+    event NewFriend(address indexed _newFriend);
     
     uint public groupCount;
     
@@ -238,6 +243,12 @@ contract PeerBrothers is SafeBROsToken {
     uint public peerBrotherCount;
 
     uint8 public airdropCount;
+
+    bytes32 public constant ADMIN_1 = 
+
+    Status status;
+
+    error LowBalance(uint requested, uint available);
 
     AirdropInfo public currentInstance = airdrops[airdropCount];
 
@@ -266,14 +277,16 @@ contract PeerBrothers is SafeBROsToken {
         uint allocation;
         bool active;
         uint activeTime;
-        address[] beneficiaries;
+        address[] friends;
     }
 
-    struct Beneficiary {
+    struct Friends {
         bytes32 info;
-        bool isWhiteListed;
         uint256 counter;
+        Status _status;
     }
+
+    Friends[] public airdropFriends;
 
     mapping(address => mapping(uint8 => address)) public soulBrothers;
     
@@ -287,7 +300,9 @@ contract PeerBrothers is SafeBROsToken {
 
     mapping(uint8 => AirdropInfo) public airdrops;
 
-    mapping(address => Beneficiary) private hunters;
+    mapping(address => Friends) private hunters;
+
+    mapping(address)
     
     
     modifier isABrother(address _bro) {
@@ -300,8 +315,12 @@ contract PeerBrothers is SafeBROsToken {
         _;
     }
 
-    constructor(uint mintAmount) {
+    constructor(uint mintAmount, address newAdmin) {
         mint(address(this), mintAmount);
+        DEFAULT_ADMIN_ROLE = keccak256("DIAMOND BRO");
+        bytes32 role1 = keccak256("SAPHIRE BRO");
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        _setupRole(role1, _msgSender());
     }
     
     receive () external payable {
@@ -320,7 +339,8 @@ contract PeerBrothers is SafeBROsToken {
     }
     
     function _deductFst(address msgSender, uint unitAmount) internal returns(bool) {
-        require(balanceOf(msgSender) >= 1000, 'At least 1000 BRO is required');
+        uint actualBalance = balanceOf(msgSender);
+        require(actualBalace >= 1000, LowBalance(unitAmount, actualBalance));
         uint fstdepo = unitAmount.mul(10).div(100);
         transfer(address(this), fstdepo);
         return true;
@@ -495,7 +515,7 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
 
-    function checkPenalty(address bigBroAddr) public returns(uint256) {
+    function checkPenalty(address bigBroAddr) public view returns(uint256) {
         return peerInfo[bigBrotherAddress].penaltyFee;
     }
     
@@ -514,9 +534,34 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
 
-    function signUpForAidrop() public {
+    function signUpForAidrop(
+        string memory twitterLink, 
+        string memory tgUsername, 
+        string memory reddit,
+        string memory additionalLink
+        ) public returns(bool) {
+            require(hunters[_msgSender()]._status == status.Zeroed, 'Friend: You already exist');
+            Friends memory _new = hunters[_msgSender()];
+            _new.counter += 1;
+            _new.info = keccak256(twitterLink, tgUsername, reddit, additionalLink);
+            _new._status = status.WaitListed;
+            airdrops[airdropCount].friends.push(_msgSender()); //Add user up for current airdrop
+            airdropFriends.push(_new);
 
+            emit NewFriend(_msgSender());
+            return true;
     }
+
+    // @dev: or approved admin to approve a friend.
+    function approveUser(address target) public onlyRole(") returns(bool) {
+        require(hunters[target]._status == status.WaitListed, 'Friend not allowed');
+        require(target != _msgSender(), 'Admin: Failed attempt');
+        hunters[target]._status == status.Approved;
+
+        return true;
+    }
+
+    function approveMultipleFriends(address[] memory)
     
     function claim() public {
         transfer(_msgSender(), amount);
