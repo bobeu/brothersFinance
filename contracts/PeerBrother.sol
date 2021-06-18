@@ -8,8 +8,7 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 import './BroToken.sol';
-
-                    // ====>INTERFACE BINANCE USD<===========================================================
+                   // ====>INTERFACE BINANCE USD<===========================================================
 
 interface BUSD {
     function deposit() external payable;
@@ -227,7 +226,7 @@ contract PeerBrothers is SafeBROsToken {
     
     event Received(address indexed brother, uint amount);
 
-    event PenaltyChanged(address bigBro, uint oldRate, uint newRate);
+    event PenaltyChanged(address bigBro, uint newRate);
 
     event NewHunter(address indexed _NewHunter);
     
@@ -243,15 +242,14 @@ contract PeerBrothers is SafeBROsToken {
 
     uint256 public totalClaimants;
 
-    uint public totalSigniUp;
+    uint public totalSignUpCount;
+    
+    bool pauseGroupActivity;
 
-    // bytes32 public constant ADMIN_1 = 
 
     Status status;
 
-    error LowBalance(uint requested, uint available);
-
-    AirdropInfo public currentInstance = airdrops[airdropCount];
+    // AirdropInfo public currentInstance = airdrops[airdropCount];
 
     struct PeerInfo {
         uint unit;
@@ -285,7 +283,7 @@ contract PeerBrothers is SafeBROsToken {
     }
 
     struct SignUps {
-        bytes32 info;
+        bytes info;
         uint256 id;
         Status _status;
     }
@@ -308,7 +306,7 @@ contract PeerBrothers is SafeBROsToken {
 
     mapping(uint8 => AirdropInfo) public airdrops;
 
-    mapping(address => Friends) private hunters;
+    // mapping(address => Friends) private hunters;
 
     mapping(address => bool) private isAdmin;
     
@@ -363,7 +361,7 @@ contract PeerBrothers is SafeBROsToken {
     
     function _deductFst(address msgSender, uint unitAmount) internal returns(bool) {
         uint actualBalance = balanceOf(msgSender);
-        require(actualBalace >= 1000, LowBalance(unitAmount, actualBalance));
+        require(actualBalance >= 1000, 'Insufficient balance');
         uint fstdepo = unitAmount.mul(10).div(100);
         transfer(address(this), fstdepo);
         return true;
@@ -450,8 +448,8 @@ contract PeerBrothers is SafeBROsToken {
             require(broInfo[_msgSender()].debt == 0, 'Outstanding debt noticed');
             uint curentPrice = getCurrentPrice();
             uint mustHave = totalUSDPool.div(curentPrice).mul(1e18);
-            require(broToken.balanceOf(_msgSender()) >= mustHave, 'Not enough Bro Balance');
-            broToken.transfer(address(this), mustHave);
+            require(balanceOf(_msgSender()) >= mustHave, 'Not enough Bro Balance');
+            transfer(address(this), mustHave);
             require(_safeTransferBUSD(_msgSender(), address(this), _deposit), 'Bad Brother');
             
             peerInfo[bigBrotherAddress].totalPoolToDate += _deposit;
@@ -533,12 +531,12 @@ contract PeerBrothers is SafeBROsToken {
         require(block.timestamp <= peerInfo[_msgSender()].permitTime, 'Grace period expires');
         peerInfo[_msgSender()].penaltyFee = _newPenaltyFee;
 
-        emit PenaltyChanged(bigBroAddr, _newPenaltyFee);
+        emit PenaltyChanged(_msgSender(), _newPenaltyFee);
         return true;
     }
 
     function checkPenalty(address bigBroAddr) public view returns(uint256) {
-        return peerInfo[bigBrotherAddress].penaltyFee;
+        return peerInfo[bigBroAddr].penaltyFee;
     }
     
     // AIRDROPS
@@ -546,16 +544,13 @@ contract PeerBrothers is SafeBROsToken {
     function createDrop(uint8 activeTimeInDays, uint256 _totalPool, uint _unitClaim) public onlyOwner returns(bool) {
         require(airdropCount <= 255, 'BRO: Cap exceeded');
         require(activeTimeInDays > 0, 'Unsigned integer expected');
-        require(_pool < _balances[address(this)], 'pool out of range');
+        require(_totalPool < balanceOf(address(this)), 'pool out of range');
         airdropCount ++;
         AirdropInfo storage _new = airdrops[airdropCount];
         _new.active = false;
         _new.activeTime = block.timestamp.add(1 days * activeTimeInDays);
         _new.poolBalance = _totalPool;
         _new.unitClaim = _unitClaim;
-
-
-        _new.users.
 
         return true;
     }
@@ -566,11 +561,11 @@ contract PeerBrothers is SafeBROsToken {
         string memory reddit,
         string memory additionalLink
         ) public returns(bool) {
-            require(airdrops[airdropCount].users[_msgSender()]._status == status.Zeroed, 'Friend: You already exist');
+            require(airdrops[airdropCount].users[_msgSender()]._status == Status.Zeroed, 'Friend: You already exist');
             totalSignUpCount += 1;
-            SignUps memory _new = airdrops[airdropCount].users[_msgSender()];
+            SignUps storage _new = airdrops[airdropCount].users[_msgSender()];
             _new.info = abi.encodePacked(twitterLink, tgUsername, reddit, additionalLink);
-            _new.id = totalSigniUp;
+            _new.id = totalSignUpCount;
             _new._status = Status.WaitListed;
 
             emit NewHunter(_msgSender());
@@ -578,36 +573,32 @@ contract PeerBrothers is SafeBROsToken {
     }
 
     // @dev: or approved admin to approve a friend.
-    function approveForAirdrop(address target) public onlyRole(role1) returns(bool) {
-        require(hunters[target]._status == status.Zeroed, 'Friend not allowed');
+    function approveForAirdrop(address target, uint8 airdropId) public onlyRole returns(bool) {
+        require(airdrops[airdropId].users[_msgSender()]._status == Status.Zeroed, 'Friend not allowed');
         require(target != _msgSender(), 'Admin: Failed attempt');
-        hunters[target]._status = status.Approved;
+        airdrops[airdropId].users[_msgSender()]._status = Status.Approved;
 
         return true;
     }
 
-    function approveMultiplehunters(address[] memory targets)  public onlyRole(role1) returns(bool) {
-        for(uint i=0; i<targets; i++){
-            require(hunters[targets[i]]._status == status.Zeroed, 'Friend not allowed');
+    function approveMultiplehunters(address[] memory targets, uint8 airdropId)  public onlyRole returns(bool) {
+        for(uint i=0; i<targets.length; i++){
+            require(airdrops[airdropId].users[targets[i]]._status == Status.Zeroed, 'Friend not allowed');
             require(targets[i] != _msgSender(), 'Admin: Failed attempt');
-            hunter[targets[i]]._status = status.Approved;
+            airdrops[airdropId].users[_msgSender()]._status = Status.Approved;
             }
         return true;
     }
 
-    function checkhunterStatus() public returns(Status) {
-        return hunters[_msgSender()]._status;
+    function checkhunterStatus(uint8 airdropId) public returns(Status) {
+        return airdrops[airdropId].users[_msgSender()]._status;
     }
 
-    function getTotalClaimantsForCurrentDrop() public onlyRole returns(uint) {
-        return airdrops[airdropCount].friends.length;
-    }
+    // function getClaimantClaimedPosition() public onlyRole returns(uint) {
+    //      return hunters[target].id;
+    // }
 
-    function getClaimantClaimedPosition() public onlyRole returns(uint) {
-         return hunters[target].id;
-    }
-
-    function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state) onlyRole returns(bool){
+    function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state)public returns(bool){
         
         if(_state) {
             airdrops[_airdropId].active = true;
@@ -617,14 +608,24 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
 
-    function getHunterLinks(address user, _airdropId) returns(string memory, string memory, string memory, string memory) {
-        (twtLink, tgLink, reddit, adtLink) = abi.decodePacked(aidrops[_airdropId].users.info)
-        return (twtLink, tgLink, reddit, adtLink)
+    function getHunterLinks(address user, uint8 _airdropId) public returns(string memory, string memory, string memory, string memory) {
+        (
+            string memory twtLink, 
+            string memory tgLink, 
+            string memory reddit, 
+            string memory adtLink
+            ) = abi.decode(
+                string,
+                string,
+                string,
+                airdrops[_airdropId].users[user].info
+                );
+        return (twtLink, tgLink, reddit, adtLink);
     }
     
     function claim(uint8 airdropId) public returns( bool){
         require(airdropId <= airdropCount, 'Such does not exist');
-        require(hunters[_msgSender()]._status == Status.Approved, 'Friend: Not qualified');
+        require(airdrops[airdropId].users[_msgSender()]._status == Status.Approved, 'Friend: Not qualified');
         uint256 activetime = airdrops[airdropId].activeTime;
         if(block.timestamp >= activetime) {
             airdrops[airdropId].active = true;
@@ -637,17 +638,17 @@ contract PeerBrothers is SafeBROsToken {
         if(airdropBalance.sub(claimable) > 0){
             totalClaimants += 1;
             _transfer(address(this), _msgSender(), claimable);
-            hunters[_msgSender()]._status = Status.Claimed;
+            airdrops[airdropId].users[_msgSender()]._status = Status.Claimed;
             airdrops[airdropId].totalClaimed += claimable;
             airdrops[airdropId].poolBalance -= claimable;
 
-            Claim storage _claim = aidrops[airdropId]._claimant[_msgSender];
+            Claim storage _claim = airdrops[airdropId]._claimant[_msgSender];
             _claim._status =  Status.Claimed;
             _claim.id = totalClaimants;
         } else {
             revert("Airdrop closed");
         }
-        return true
+        return true;
     }
     
 }
