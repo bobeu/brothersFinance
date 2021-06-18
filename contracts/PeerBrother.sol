@@ -6,7 +6,6 @@ import "openzeppelin-solidity/contracts/utils/Context.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
-import "openzeppelin-solidity/contracts/access/AccessControl.sol";
 
 import './BroToken.sol';
 
@@ -23,15 +22,13 @@ interface BUSD {
 
                     // =====>BRO TOKEN IMPLEMENTATION<=======================================================
 
-contract SafeBROsToken is ERC20, Ownable, AccessControl {
+contract SafeBROsToken is ERC20, Ownable {
 
     using SafeMath for uint256;
 
     event MuteAccount(address indexed _target);
 
     event UnMuteAccount(address indexed _target);
-
-    // bytes32 public constant PROPOSER_ROLE = keccak256("PROPOSER_ROLE");
 
     mapping(address => bool) private suspension;
 
@@ -50,7 +47,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
     
     }
 
-    modifier isNotsuspension(address _any) {
+    modifier isNotsuspended(address _any) {
         require(!suspension[_any], 'Restricted');
         _;
     }
@@ -63,7 +60,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) public override isNotsuspension(_msgSender()) returns(bool) {
+    function transfer(address recipient, uint256 amount) public override isNotsuspended(_msgSender()) returns(bool) {
         super._transfer(_msgSender(), recipient, amount);
 
         return true;
@@ -72,7 +69,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
     /**
      * @dev See {ERC20-allowance}.
      */
-    function allowance(address owner, address spender) public override view isNotsuspension(_msgSender()) returns (uint256) {
+    function allowance(address owner, address spender) public override view isNotsuspended(_msgSender()) returns (uint256) {
         return super.allowance(owner, spender);
     }
 
@@ -83,7 +80,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) public override isNotsuspension(_msgSender()) returns (bool) {
+    function approve(address spender, uint256 amount) public override isNotsuspended(_msgSender()) returns (bool) {
         super.approve(spender, amount);
         return true;
     }
@@ -100,7 +97,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      * - the caller must have allowance for `sender`'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public override isNotsuspension(_msgSender()) returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override isNotsuspended(_msgSender()) returns (bool) {
         super.transferFrom(sender, recipient, amount);
 
         return true;
@@ -118,7 +115,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      *
      * - `spender` cannot be the zero address.
      */
-    function increaseAllowance(address spender, uint256 addedValue) public override isNotsuspension(_msgSender()) returns (bool) {
+    function increaseAllowance(address spender, uint256 addedValue) public override isNotsuspended(_msgSender()) returns (bool) {
         super.increaseAllowance(spender, addedValue);
 
         return true;
@@ -138,7 +135,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      * - `spender` must have allowance for the caller of at least
      * `subtractedValue`.
      */
-    function decreaseAllowance(address spender, uint256 subtractedValue) public override isNotsuspension(_msgSender()) returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue) public override isNotsuspended(_msgSender()) returns (bool) {
         super.decreaseAllowance(spender, subtractedValue);
 
         return true;
@@ -172,7 +169,7 @@ contract SafeBROsToken is ERC20, Ownable, AccessControl {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
-    function burn(address account, uint256 amount) external isNotsuspension(_msgSender()) returns(bool) {
+    function burn(address account, uint256 amount) external isNotsuspended(_msgSender()) returns(bool) {
         _burn(account, amount);
 
         return true;
@@ -224,7 +221,7 @@ contract PeerBrothers is SafeBROsToken {
 
     using SafeMath for uint256;
 
-    enum Status { Zeroed, WaitListed, Approved }
+    enum Status { Zeroed, WaitListed, Approved, Claimed }
     
     event Deposit(address indexed brother, uint amount);
     
@@ -232,7 +229,7 @@ contract PeerBrothers is SafeBROsToken {
 
     event PenaltyChanged(address bigBro, uint oldRate, uint newRate);
 
-    event NewFriend(address indexed _newFriend);
+    event NewHunter(address indexed _NewHunter);
     
     uint public groupCount;
     
@@ -244,7 +241,11 @@ contract PeerBrothers is SafeBROsToken {
 
     uint8 public airdropCount;
 
-    bytes32 public constant ADMIN_1 = 
+    uint256 public totalClaimants;
+
+    uint public totalSigniUp;
+
+    // bytes32 public constant ADMIN_1 = 
 
     Status status;
 
@@ -274,19 +275,26 @@ contract PeerBrothers is SafeBROsToken {
     }
 
     struct AirdropInfo {
-        uint allocation;
+        uint256 poolBalance;
         bool active;
         uint activeTime;
-        address[] friends;
+        uint256 totalClaimed;
+        uint256 unitClaim;
+        mapping(address => SignUps) users;
+        mapping(address => Claim) _claimant;
     }
 
-    struct Friends {
+    struct SignUps {
         bytes32 info;
-        uint256 counter;
+        uint256 id;
         Status _status;
     }
 
-    Friends[] public airdropFriends;
+    struct Claim {
+        Status _status;
+        uint256 id;
+    }
+
 
     mapping(address => mapping(uint8 => address)) public soulBrothers;
     
@@ -302,7 +310,7 @@ contract PeerBrothers is SafeBROsToken {
 
     mapping(address => Friends) private hunters;
 
-    mapping(address)
+    mapping(address => bool) private isAdmin;
     
     
     modifier isABrother(address _bro) {
@@ -315,16 +323,31 @@ contract PeerBrothers is SafeBROsToken {
         _;
     }
 
+    modifier onlyRole {
+        require(isAdmin[_msgSender()], 'Not Authorized');
+        _;
+    }
+
     constructor(uint mintAmount, address newAdmin) {
         mint(address(this), mintAmount);
-        DEFAULT_ADMIN_ROLE = keccak256("DIAMOND BRO");
-        bytes32 role1 = keccak256("SAPHIRE BRO");
-        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        _setupRole(role1, _msgSender());
+        isAdmin[_msgSender()] = true;
     }
     
+    //    =====>MAIN<=====
+
     receive () external payable {
         if(msg.value < 1e17 wei) revert();
+    }
+
+    function setRole(address _newRole, bool state) public onlyOwner returns(bool) {
+        if(state){
+            isAdmin[_msgSender()] = true;
+            return true;
+        } else if(!state) {
+            isAdmin[_msgSender()] = false;
+        }
+        return true;
+        
     }
     
     function changeFamilyActStatus(bool state) public onlyOwner returns(string memory) {
@@ -436,9 +459,9 @@ contract PeerBrothers is SafeBROsToken {
             emit Deposit(_msgSender(), _deposit);
             
             return true;
-        } else {
-            revert('Deposit completed');
-        }
+            } else {
+                revert('Deposit completed');
+                }
         
     }
     
@@ -468,11 +491,10 @@ contract PeerBrothers is SafeBROsToken {
             emit Deposit(next, poolToDate);
             
             return true;
-        } else {
-            return false;
-        }
-        
-        
+            } else {
+                return false;
+                }
+
     }
 
     function payBack(address _bigBrotherAddress, uint8 _position, uint _owings) external isABrother(_msgSender()) isBinded(_bigBrotherAddress, _position, _msgSender()) returns(bool) {
@@ -480,17 +502,17 @@ contract PeerBrothers is SafeBROsToken {
         uint penalty = peerInfo[_bigBrotherAddress].penaltyFee;
         require(!broInfo[_msgSender()].isCreditor && outstandingDebt > 0 && _owings == outstandingDebt, 'No previous debt Or payback too low');
         if(block.timestamp > broInfo[_msgSender()].payDay){
-            outstandingDebt += penalty; 
-        } else {
-            outstandingDebt = outstandingDebt;
+            outstandingDebt += penalty;
+            } else {
+                outstandingDebt = outstandingDebt;
         }
         if(_safeTransferBUSD(_msgSender(), address(this), outstandingDebt)) {
             broInfo[_msgSender()].debt -= outstandingDebt;
             broInfo[_msgSender()].isCreditor = true;
             return true;
-        } else{
-            return false;
-        }
+            } else {
+                return false;
+                }
         
     }
 
@@ -521,15 +543,19 @@ contract PeerBrothers is SafeBROsToken {
     
     // AIRDROPS
 
-    function createDrop(uint8 activeTimeInDays, uint256 _allocation) public onlyOwner returns(bool) {
+    function createDrop(uint8 activeTimeInDays, uint256 _totalPool, uint _unitClaim) public onlyOwner returns(bool) {
         require(airdropCount <= 255, 'BRO: Cap exceeded');
         require(activeTimeInDays > 0, 'Unsigned integer expected');
-        require(_allocation < _balances[address(this)], 'Allocation out of range');
+        require(_pool < _balances[address(this)], 'pool out of range');
         airdropCount ++;
         AirdropInfo storage _new = airdrops[airdropCount];
         _new.active = false;
         _new.activeTime = block.timestamp.add(1 days * activeTimeInDays);
-        _new.allocation = _allocation;
+        _new.poolBalance = _totalPool;
+        _new.unitClaim = _unitClaim;
+
+
+        _new.users.
 
         return true;
     }
@@ -540,31 +566,88 @@ contract PeerBrothers is SafeBROsToken {
         string memory reddit,
         string memory additionalLink
         ) public returns(bool) {
-            require(hunters[_msgSender()]._status == status.Zeroed, 'Friend: You already exist');
-            Friends memory _new = hunters[_msgSender()];
-            _new.counter += 1;
-            _new.info = keccak256(twitterLink, tgUsername, reddit, additionalLink);
-            _new._status = status.WaitListed;
-            airdrops[airdropCount].friends.push(_msgSender()); //Add user up for current airdrop
-            airdropFriends.push(_new);
+            require(airdrops[airdropCount].users[_msgSender()]._status == status.Zeroed, 'Friend: You already exist');
+            totalSignUpCount += 1;
+            SignUps memory _new = airdrops[airdropCount].users[_msgSender()];
+            _new.info = abi.encodePacked(twitterLink, tgUsername, reddit, additionalLink);
+            _new.id = totalSigniUp;
+            _new._status = Status.WaitListed;
 
-            emit NewFriend(_msgSender());
+            emit NewHunter(_msgSender());
             return true;
     }
 
     // @dev: or approved admin to approve a friend.
-    function approveUser(address target) public onlyRole(") returns(bool) {
-        require(hunters[target]._status == status.WaitListed, 'Friend not allowed');
+    function approveForAirdrop(address target) public onlyRole(role1) returns(bool) {
+        require(hunters[target]._status == status.Zeroed, 'Friend not allowed');
         require(target != _msgSender(), 'Admin: Failed attempt');
-        hunters[target]._status == status.Approved;
+        hunters[target]._status = status.Approved;
 
         return true;
     }
 
-    function approveMultipleFriends(address[] memory)
+    function approveMultiplehunters(address[] memory targets)  public onlyRole(role1) returns(bool) {
+        for(uint i=0; i<targets; i++){
+            require(hunters[targets[i]]._status == status.Zeroed, 'Friend not allowed');
+            require(targets[i] != _msgSender(), 'Admin: Failed attempt');
+            hunter[targets[i]]._status = status.Approved;
+            }
+        return true;
+    }
+
+    function checkhunterStatus() public returns(Status) {
+        return hunters[_msgSender()]._status;
+    }
+
+    function getTotalClaimantsForCurrentDrop() public onlyRole returns(uint) {
+        return airdrops[airdropCount].friends.length;
+    }
+
+    function getClaimantClaimedPosition() public onlyRole returns(uint) {
+         return hunters[target].id;
+    }
+
+    function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state) onlyRole returns(bool){
+        
+        if(_state) {
+            airdrops[_airdropId].active = true;
+            } else if(!_state) {
+                airdrops[_airdropId].active = false;
+            }
+        return true;
+    }
+
+    function getHunterLinks(address user, _airdropId) returns(string memory, string memory, string memory, string memory) {
+        (twtLink, tgLink, reddit, adtLink) = abi.decodePacked(aidrops[_airdropId].users.info)
+        return (twtLink, tgLink, reddit, adtLink)
+    }
     
-    function claim() public {
-        transfer(_msgSender(), amount);
+    function claim(uint8 airdropId) public returns( bool){
+        require(airdropId <= airdropCount, 'Such does not exist');
+        require(hunters[_msgSender()]._status == Status.Approved, 'Friend: Not qualified');
+        uint256 activetime = airdrops[airdropId].activeTime;
+        if(block.timestamp >= activetime) {
+            airdrops[airdropId].active = true;
+        }
+        require(airdrops[airdropId].active, 'Airdrop is inactive');
+        uint claimable = airdrops[airdropId].unitClaim;
+        uint totalClaimedToDate = airdrops[airdropId].totalClaimed;
+        uint airdropBalance = airdrops[airdropId].poolBalance;
+        
+        if(airdropBalance.sub(claimable) > 0){
+            totalClaimants += 1;
+            _transfer(address(this), _msgSender(), claimable);
+            hunters[_msgSender()]._status = Status.Claimed;
+            airdrops[airdropId].totalClaimed += claimable;
+            airdrops[airdropId].poolBalance -= claimable;
+
+            Claim storage _claim = aidrops[airdropId]._claimant[_msgSender];
+            _claim._status =  Status.Claimed;
+            _claim.id = totalClaimants;
+        } else {
+            revert("Airdrop closed");
+        }
+        return true
     }
     
 }
