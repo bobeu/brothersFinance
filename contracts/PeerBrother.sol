@@ -209,10 +209,11 @@ contract SafeBROsToken is ERC20, Ownable {
         return suspension[_target];
     }
 
-    function confiscate()
+    // function confiscate()
 
 
 }
+
 
 
                             // ====>CONTRACT MAIN<====================================================
@@ -226,7 +227,7 @@ contract PeerBrothers is SafeBROsToken {
     
     event Received(address indexed brother, uint amount);
 
-    event PenaltyChanged(address bigBro, uint oldRate, uint newRate));
+    event PenaltyChanged(address bigBro, uint oldRate, uint newRate);
     
     uint public groupCount;
     
@@ -235,6 +236,10 @@ contract PeerBrothers is SafeBROsToken {
     address public immutable busd = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56;
     
     uint public peerBrotherCount;
+
+    uint8 public airdropCount;
+
+    AirdropInfo public currentInstance = airdrops[airdropCount];
 
     struct PeerInfo {
         uint unit;
@@ -255,7 +260,19 @@ contract PeerBrothers is SafeBROsToken {
         uint payDay;
         bool isPaid;
         uint credit;
-        
+    }
+
+    struct AirdropInfo {
+        uint allocation;
+        bool active;
+        uint activeTime;
+        address[] beneficiaries;
+    }
+
+    struct Beneficiary {
+        bytes32 info;
+        bool isWhiteListed;
+        uint256 counter;
     }
 
     mapping(address => mapping(uint8 => address)) public soulBrothers;
@@ -267,6 +284,10 @@ contract PeerBrothers is SafeBROsToken {
     mapping(address => uint) public position;
     
     mapping(address => bool) public isABigBrother;
+
+    mapping(uint8 => AirdropInfo) public airdrops;
+
+    mapping(address => Beneficiary) private hunters;
     
     
     modifier isABrother(address _bro) {
@@ -279,8 +300,8 @@ contract PeerBrothers is SafeBROsToken {
         _;
     }
 
-    constructor() {
-    
+    constructor(uint mintAmount) {
+        mint(address(this), mintAmount);
     }
     
     receive () external payable {
@@ -470,7 +491,7 @@ contract PeerBrothers is SafeBROsToken {
         require(block.timestamp <= peerInfo[_msgSender()].permitTime, 'Grace period expires');
         peerInfo[_msgSender()].penaltyFee = _newPenaltyFee;
 
-        emit PenaltyChanged(bigBroAddr, _newPenaltyFee)
+        emit PenaltyChanged(bigBroAddr, _newPenaltyFee);
         return true;
     }
 
@@ -478,7 +499,27 @@ contract PeerBrothers is SafeBROsToken {
         return peerInfo[bigBrotherAddress].penaltyFee;
     }
     
+    // AIRDROPS
+
+    function createDrop(uint8 activeTimeInDays, uint256 _allocation) public onlyOwner returns(bool) {
+        require(airdropCount <= 255, 'BRO: Cap exceeded');
+        require(activeTimeInDays > 0, 'Unsigned integer expected');
+        require(_allocation < _balances[address(this)], 'Allocation out of range');
+        airdropCount ++;
+        AirdropInfo storage _new = airdrops[airdropCount];
+        _new.active = false;
+        _new.activeTime = block.timestamp.add(1 days * activeTimeInDays);
+        _new.allocation = _allocation;
+
+        return true;
+    }
+
+    function signUpForAidrop() public {
+
+    }
     
-    
+    function claim() public {
+        transfer(_msgSender(), amount);
+    }
     
 }
