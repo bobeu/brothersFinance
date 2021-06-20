@@ -8,7 +8,8 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 import './BroToken.sol';
-                   // ====>INTERFACE BINANCE USD<===========================================================
+
+                    // ====>INTERFACE BINANCE USD<===========================================================
 
 interface BUSD {
     function deposit() external payable;
@@ -42,8 +43,8 @@ contract SafeBROsToken is ERC20, Ownable {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor() ERC20("BrothersToken", "BROT"){
-    
+    constructor(uint supply) ERC20("BroToken", "BROT") public {
+        _mint(_msgSender(), (supply * 10**18));
     }
 
     modifier isNotsuspended(address _any) {
@@ -191,14 +192,14 @@ contract SafeBROsToken is ERC20, Ownable {
     //     }
     // }
 
-    function _suspendAccount(address _target) internal virtual returns(bool) {
+    function suspendAccount(address _target) public onlyOwner returns(bool) {
         if(!suspension[_target]) revert('Account not suspended before now');
         suspension[_target] = true;
         emit MuteAccount(_target);
         return suspension[_target];
     }
 
-    function _unsuspendAccount(address _target) internal virtual returns(bool) {
+    function unsuspendAccount(address _target) public onlyOwner returns(bool) {
         if(suspension[_target]) revert('Account is suspended before now.');
         suspension[_target] = true;
         emit UnMuteAccount(_target);
@@ -244,7 +245,7 @@ contract PeerBrothers is SafeBROsToken {
 
     uint public totalSignUpCount;
     
-    bool pauseGroupActivity;
+    bool private pauseGroupActivity;
 
 
     Status status;
@@ -261,6 +262,9 @@ contract PeerBrothers is SafeBROsToken {
         uint8 rotator;
         uint penaltyFee;
         uint permitTime;
+        uint expectedPool;
+        mapping(uint8 => BrotherInfo) members;
+        // BrotherInfo brother;
     }
     
     struct BrotherInfo {
@@ -270,6 +274,8 @@ contract PeerBrothers is SafeBROsToken {
         uint payDay;
         bool isPaid;
         uint credit;
+        mapping(uint8 => address) position;
+
     }
 
     struct AirdropInfo {
@@ -298,21 +304,18 @@ contract PeerBrothers is SafeBROsToken {
     
     mapping(address => PeerInfo) private peerInfo;
     
-    mapping(address => BrotherInfo) private broInfo;
-    
-    mapping(address => uint) public position;
-    
+    // mapping(address => BrotherInfo) private broInfo;
+        
     mapping(address => bool) public isABigBrother;
 
     mapping(uint8 => AirdropInfo) public airdrops;
 
-    // mapping(address => Friends) private hunters;
 
-    mapping(address => bool) private isAdmin;
+    mapping(address => bool) public isAdmin;
     
     
     modifier isABrother(address _bro) {
-        require(broInfo[_bro].isBroListed, 'Not a bro');
+        require(peerInfo[_bro].members.isBroListed, 'Not recognized');
         _;
     }
     
@@ -326,10 +329,10 @@ contract PeerBrothers is SafeBROsToken {
         _;
     }
 
-    constructor(uint mintAmount, address newAdmin) {
-        mint(address(this), mintAmount);
+    constructor(uint _supply) public SafeBROsToken(_supply) {
         isAdmin[_msgSender()] = true;
     }
+    
     
     //    =====>MAIN<=====
 
@@ -339,10 +342,10 @@ contract PeerBrothers is SafeBROsToken {
 
     function setRole(address _newRole, bool state) public onlyOwner returns(bool) {
         if(state){
-            isAdmin[_msgSender()] = true;
+            isAdmin[_newRole] = true;
             return true;
         } else if(!state) {
-            isAdmin[_msgSender()] = false;
+            isAdmin[_newRole] = false;
         }
         return true;
         
@@ -374,51 +377,73 @@ contract PeerBrothers is SafeBROsToken {
         return true;
         
     }
-
-    function setTies(
-        address[] memory _brothers, 
+    // Any of the Peer brothers agreed as bigBrother initialises a finance group
+    
+    function setUpAPeer(
         uint _unitAmount, 
-        uint8 _interestRate, 
+        uint8 _interestRate, //Note at fixing=================================
         uint _maxDurationInDays,
-        uint _penaltyFeeInBUSD
+        uint _penaltyFeeInBUSD,
+        uint8 peerSize
         ) external returns(bool) {
+            PeerInfo storage _new = peerInfo[_msgSender()];
             require(pauseGroupActivity, 'Not available at this time');
             require(_deductFst(_msgSender(), _unitAmount), 'Error');
-            require(_brothers.length <= 10, '10 Brothers Max');
+            require(_new.peers.length == 0, 'Can only create one peer.');
             require(_maxDurationInDays.mul(1 days) <= 7 days, 'But why? Consider rest');
             require(peerInfo[_msgSender()].staged == 0 || position[_msgSender()] == 0, 'Multiple registration');
             require(_safeTransferBUSD(_msgSender(), address(this), _unitAmount), 'Bad Brother');
-            uint i = 0;
-            uint num_Bro = _brothers.length;
-            uint8 _identifier = 0;
-            while (i < num_Bro) {
-                i += 1;
-                _identifier ++;
-                BrotherInfo storage bro = broInfo[_brothers[i]];
-                bro.isBroListed = true;
-                bro.debt += 0;
-                bro.isCreditor = true;
-                bro.payDay = 0;
-                bro.isPaid = false;
-                soulBrothers[_msgSender()][_identifier] = _brothers[i];
-                position[_brothers[i]] = _identifier;
+
+            if(_safeTransferBUSD(_msgSender(), address(this), _unitAmount)) {
+                _new.unit = _unitAmount;
+                _new.totalPoolToDate = _unitAmount;
+                _new.agreedRate = _interestRate;
+                _new.maxDuration = _maxDurationInDays.mul(1 days);
+                _new.staged = 1;
+                _new.groupSize = peerSize;
+                _new.rotator = 1;
+                _new.penaltyFee = _penaltyFeeInBUSD;
+                _new.permitTime = block.timestamp.add(1 days);
+                _new.expectedPool = _unitAmount.mul(peerSize);
+                // _new.members[_new.groupSize] = _msgSender();
+
+                for(uint i=0; i<peerSize; i++) {
+                    _new.members[peerSize] = BrothersInfo({
+                        isBroListed: true,
+                        debt: _unitAmount,
+                        isCreditor: true,
+                        payday: 0,
+                        isPaid: false,
+                        credit: 0,
+                        position[peerSize]: address(0)
+                        })
+                    soulBrothers[_msgSender()][peerSize]: address(0);
+
+                    peerSize --;
+                    }
+
+                    isABigBrother[_msgSender()] = true;
+                    peerBrotherCount ++;
+                    groupCount ++;
+            } else {
+                revert('Failed');
             }
-            peerInfo[_msgSender()] = PeerInfo({
-                unit: _unitAmount,
-                totalPoolToDate: _unitAmount,
-                agreedRate: _interestRate,
-                maxDuration: _maxDurationInDays.mul(1 days),
-                staged: 1,
-                groupSize: _brothers.length,
-                rotator: 1,
-                penaltyFee: _penaltyFeeInBUSD,
-                permitTime: block.timestamp.add(1 days)
-                
-            });
-        isABigBrother[_msgSender()] = true;
-        peerBrotherCount ++;
-        groupCount ++;
         return true;
+    }
+
+    function joinYourPeer(address adminAddr, uint8 _position) public isABrother(adminAddr) returns(bool) {
+        uint remittance = peerInfo[adminAddr].unit;
+        
+        uint totalUSDPool = peerInfo[adminAddr].totalPoolToDate;
+        uint expectedPoolBal = peerInfo[adminAddr].expectedPool;
+        if((totalUSDPool.add(remittance) < expectedPoolBal)){
+            require(_safeTransferBUSD(_msgSender(), address(this), remittance), 'Not completed');
+            peerInfo[adminAddr].members.position[_position] = _msgSender();
+            soulBrothers[adminAddr][_position] = _msgSender();
+            peerInfo[adminAddr].members.credit = remittance;
+        } else {
+            revert('Pool amount is reached');
+        }
     }
     
     function getCurrentPrice() internal pure returns(uint256) {
@@ -436,7 +461,6 @@ contract PeerBrothers is SafeBROsToken {
         returns(bool) 
         {
         uint groupSize = peerInfo[bigBrotherAddress].groupSize;
-        uint totalUSDPool = peerInfo[bigBrotherAddress].unit.mul(groupSize);
         
         if(peerInfo[bigBrotherAddress].totalPoolToDate == totalUSDPool) {
             revert('Pool completed');
@@ -504,7 +528,8 @@ contract PeerBrothers is SafeBROsToken {
             } else {
                 outstandingDebt = outstandingDebt;
         }
-        if(_safeTransferBUSD(_msgSender(), address(this), outstandingDebt)) {
+        bool tf = _safeTransferBUSD(_msgSender(), address(this), outstandingDebt);
+        if(tf) {
             broInfo[_msgSender()].debt -= outstandingDebt;
             broInfo[_msgSender()].isCreditor = true;
             return true;
@@ -590,13 +615,13 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
 
-    function checkhunterStatus(uint8 airdropId) public returns(Status) {
+    function checkhunterStatus(uint8 airdropId) public view returns(Status) {
         return airdrops[airdropId].users[_msgSender()]._status;
     }
 
-    // function getClaimantClaimedPosition() public onlyRole returns(uint) {
-    //      return hunters[target].id;
-    // }
+    function getBlockNumber() public view returns(uint) {
+         return block.number;
+    }
 
     function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state)public returns(bool){
         
@@ -608,18 +633,14 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
 
-    function getHunterLinks(address user, uint8 _airdropId) public returns(string memory, string memory, string memory, string memory) {
+    function getHunterLinks(address user, uint8 _airdropId) public view returns(string memory, string memory, string memory, string memory) {
+        bytes storage data = airdrops[_airdropId].users[user].info;
         (
             string memory twtLink, 
             string memory tgLink, 
             string memory reddit, 
             string memory adtLink
-            ) = abi.decode(
-                string,
-                string,
-                string,
-                airdrops[_airdropId].users[user].info
-                );
+            ) = abi.decode(data, (string, string, string, string));
         return (twtLink, tgLink, reddit, adtLink);
     }
     
@@ -632,7 +653,6 @@ contract PeerBrothers is SafeBROsToken {
         }
         require(airdrops[airdropId].active, 'Airdrop is inactive');
         uint claimable = airdrops[airdropId].unitClaim;
-        uint totalClaimedToDate = airdrops[airdropId].totalClaimed;
         uint airdropBalance = airdrops[airdropId].poolBalance;
         
         if(airdropBalance.sub(claimable) > 0){
@@ -642,7 +662,7 @@ contract PeerBrothers is SafeBROsToken {
             airdrops[airdropId].totalClaimed += claimable;
             airdrops[airdropId].poolBalance -= claimable;
 
-            Claim storage _claim = airdrops[airdropId]._claimant[_msgSender];
+            Claim storage _claim = airdrops[airdropId]._claimant[_msgSender()];
             _claim._status =  Status.Claimed;
             _claim.id = totalClaimants;
         } else {
