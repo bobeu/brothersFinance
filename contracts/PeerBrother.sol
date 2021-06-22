@@ -9,6 +9,7 @@ import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 import './BroToken.sol';
 
+        // uint8 rotator;
 
 interface BUSD {
     function deposit() external payable;
@@ -190,15 +191,15 @@ contract SafeBROsToken is ERC20, Ownable {
     // }
 
     function suspendAccount(address _target) public onlyOwner returns(bool) {
-        if(!suspension[_target]) revert('Account not suspended before now');
+        if(suspension[_target]) revert('Account suspended before now');
         suspension[_target] = true;
         emit MuteAccount(_target);
         return suspension[_target];
     }
 
     function unsuspendAccount(address _target) public onlyOwner returns(bool) {
-        if(suspension[_target]) revert('Account is suspended before now.');
-        suspension[_target] = true;
+        if(!suspension[_target]) revert('Account is not suspended before now.');
+        suspension[_target] = false;
         emit UnMuteAccount(_target);
 
         return suspension[_target];
@@ -228,7 +229,7 @@ contract PeerBrothers is SafeBROsToken {
 
     event NewHunter(address indexed _NewHunter);
     
-    uint public groupCount;
+    // uint public groupCount;
     
     // bool private familyAct;
     
@@ -236,7 +237,7 @@ contract PeerBrothers is SafeBROsToken {
     
     // address public immutable busd = 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56;
     
-    uint public peerBrotherCount;
+    uint public peerGroupCount;
 
     uint8 public airdropCount;
 
@@ -258,11 +259,11 @@ contract PeerBrothers is SafeBROsToken {
         uint8 agreedRate;
         uint8 staged;
         uint8 groupSize;
-        // uint8 rotator;
         uint penaltyFee;
         uint permitTime;
         uint expectedPool;
         bool locked;
+        uint frequency;
         mapping(address => uint8) position;
         mapping(uint8 => BrotherInfo) members;
     }
@@ -313,13 +314,17 @@ contract PeerBrothers is SafeBROsToken {
     mapping(address => bool) public isAdmin;
     
     
-    modifier isABrother(address _bro, uint8 _p) {
-        require(peerInfo[_bro].members[_p].isBroListed, 'Not recognized');
+    modifier isABrother(address _bro, address target) {
+        uint8 pos = peerInfo[_bro].position[target];
+        require(pos > 0, 'No peer detected');
+        require(peerInfo[_bro].members[pos].isBroListed, 'Not recognized');
         _;
     }
     
-    modifier isBinded(address _adminAddr, uint8 _position, address target) {
-        require(soulBrothers[_adminAddr][_position] == target, 'No ties');
+    modifier isBinded(address _adminAddr, address target) {
+        uint8 pos = peerInfo[_adminAddr].position[target];
+        require(pos > 0, 'No peer detected');
+        require(soulBrothers[_adminAddr][pos] == target, 'No ties');
         _;
     }
 
@@ -345,11 +350,11 @@ contract PeerBrothers is SafeBROsToken {
         if(msg.value < 1e17 wei) revert();
     }
 
-    function setRole(address _newRole, bool state) public onlyOwner returns(bool) {
-        if(state){
+    function setRole(address _newRole, bool any) public onlyOwner returns(bool) {
+        if(any){
             isAdmin[_newRole] = true;
             return true;
-        } else if(!state) {
+        } else if(!any) {
             isAdmin[_newRole] = false;
         }
         return true;
@@ -372,15 +377,17 @@ contract PeerBrothers is SafeBROsToken {
         
     }
     
-    function _deductFst(address msgSender, uint unitAmount) internal returns(bool) {
+    function _deductFst(uint valueBUSD, address msgSender) internal returns(bool) {
         uint actualBalance = balanceOf(msgSender);
-        require(actualBalance >= 1000, 'Insufficient balance');
-        uint fstdepo = unitAmount.mul(10).div(100);
+        uint p = getCurrentPrice();
+        uint dep = valueBUSD.mul(p);
+        uint fstdepo = dep.add(valueBUSD.mul(10).div(100));
+        require(actualBalance >= fstdepo, 'Insufficient balance');
         transfer(address(this), fstdepo);
         return true;
     }
     
-    function _safeTransferBUSD(address sender, address recipient, uint _amount) internal returns(bool) {
+    function _safeTransferBUSD(address sender, address recipient, uint _amount) internal view returns(bool) {
         // uint previousBalance = busd.balanceOf(sender);
         // busd.transfer(recipient, _amount);
         // require(busd.balanceOf(sender).add(_amount) == previousBalance, 'Something went wrong');
@@ -399,11 +406,11 @@ contract PeerBrothers is SafeBROsToken {
             address k = _msgSender();
             PeerInfo storage _new = peerInfo[k];
             require(groupStatus, 'Not available at this time');
-            require(_deductFst(k, _unitAmount), 'Error');
+            require(_deductFst(_unitAmount, k), 'Something went wrong');
             require(_maxDurationInDays.mul(1 days) <= 7 days, 'But why? Consider rest');
             require(!peerInfo[k].locked, 'Current round not ended');
             // require(_safeTransferBUSD(_msgSender(), address(this), _unitAmount), 'Bad Brother');
-            // uint8 esc = peerSize;
+            uint8 esc = peerSize;
 
             if(_safeTransferBUSD(k, address(this), _unitAmount)) {
                 _new.unit = _unitAmount;
@@ -411,39 +418,40 @@ contract PeerBrothers is SafeBROsToken {
                 _new.agreedRate = _interestRate;
                 _new.maxDuration = _maxDurationInDays.mul(1 days);
                 _new.groupSize = peerSize;
-                // _new.rotator = 1;
+                _new.frequency = 0;
                 _new.penaltyFee = _penaltyFeeInBUSD;
                 _new.permitTime = block.timestamp.add(1 days);
                 _new.expectedPool = _unitAmount.mul(peerSize);
 
-                for(uint i=0; i<peerSize; i++) {
-                    _new.members[peerSize] = BrotherInfo({
+                for(uint i=0; i<esc; i++) {
+                    _new.members[esc] = BrotherInfo({
                         brother: address(0),
                         isBroListed: false,
-                        debt: _unitAmount,
+                        debt: 0,
                         isCreditor: false,
                         payDay: 0,
                         isPaid: false,
                         credit: 0
                         });
-                    soulBrothers[k][peerSize] = address(0);
+                    soulBrothers[k][esc] = address(0);
 
-                    peerSize --;
+                    esc --;
                     }
             } else {
                 revert('Failed');
                 }
-            isABigBrother[_msgSender()] = true;
-            peerBrotherCount ++;
-            groupCount ++;
-            address p = peerInfo[k].members[1].brother = k;
-            peerInfo[k].members[1].isBroListed = true;
-            peerInfo[k].members[1].isCreditor = true;
-            peerInfo[p].position[p] = peerInfo[p].groupSize;
+            isABigBrother[k] = true;
+            peerGroupCount ++;
+            peerInfo[k].members[peerSize].brother = k;
+            peerInfo[k].members[peerSize].isBroListed = true;
+            peerInfo[k].members[peerSize].isCreditor = true;
+            peerInfo[k].position[k] = peerSize;
+            soulBrothers[k][peerSize] = k;
+            peerInfo[k].groupSize -= 1;
             return true;
     }
     
-    function getMemberDetail(address adminAddr, uint8 memberId) public view returns(address, bool, uint, bool, uint, bool, uint) {
+    function getMemberInfo(address adminAddr, uint8 memberId) public view returns(address, bool, uint, bool, uint, bool, uint) {
         address p = adminAddr;
         uint8 i = memberId;
         return (
@@ -457,22 +465,26 @@ contract PeerBrothers is SafeBROsToken {
             );
     }
 
-    function joinYourPeer(address adminAddr) public returns(bool) {
+    function joinYourPeer(address adminAddr) public returns(uint8) {
         address p = _msgSender();
-        require(peerInfo[p].groupSize > 0, 'No vacant position for this peer');
-        uint remittance = peerInfo[adminAddr].unit;
-        uint8 availableposition = peerInfo[p].groupSize - 1;
-        uint totalUSDPool = peerInfo[adminAddr].totalPoolToDate;
-        uint expectedPoolBal = peerInfo[adminAddr].expectedPool;
+        address a = adminAddr;
+        require(peerInfo[a].groupSize > 0, 'No vacant position for this peer');
+        uint remittance = peerInfo[a].unit;
+        uint8 ap = peerInfo[p].groupSize;
+        require(peerInfo[a].members[ap].brother != p, 'Multiple registration: denied');
+        uint totalUSDPool = peerInfo[a].totalPoolToDate;
+        uint expectedPoolBal = peerInfo[a].expectedPool;
         if((totalUSDPool.add(remittance) <= expectedPoolBal)){
-            require(_deductFst(p, remittance), 'Error');
+            require(_deductFst(remittance, p), 'Error');
             require(_safeTransferBUSD(p, address(this), remittance), 'Not completed');
-            peerInfo[adminAddr].members[availableposition].brother = p;
-            soulBrothers[adminAddr][availableposition] = _msgSender();
-            peerInfo[adminAddr].members[availableposition].credit = remittance;
-            peerInfo[adminAddr].totalPoolToDate += remittance;
+            peerInfo[a].members[ap].brother = p;
+            soulBrothers[a][ap] = _msgSender();
+            peerInfo[a].members[ap].credit = remittance;
+            peerInfo[a].totalPoolToDate += remittance;
             
-            emit Deposit(_msgSender(), remittance);
+            peerInfo[p].groupSize -= 1;
+            emit Deposit(p, remittance);
+            return ap;
         } else {
             revert('Pool amount is reached');
         }
@@ -482,60 +494,63 @@ contract PeerBrothers is SafeBROsToken {
         return 2;
     }
     
-    function getFinance(address adminAddr, uint8 _position) public isABrother(_msgSender(), _position) isBinded(adminAddr, _position, _msgSender()) returns(bool) {
-        uint8 rotator = peerInfo[adminAddr].groupSize;
+    function getFinance(address adminAddr) public isABrother(adminAddr, _msgSender()) isBinded(adminAddr, _msgSender()) returns(bool) {
+        uint8 rotator = peerInfo[adminAddr].groupSize += 1;
+        address g = adminAddr;
         address next = soulBrothers[adminAddr][rotator];
-        require(_msgSender() == next, 'Not your turn');
+        require(next == _msgSender() && next != address(0), 'Not your turn');
         
-        uint8 nextId = peerInfo[adminAddr].groupSize;
-        uint poolToDate = peerInfo[adminAddr].totalPoolToDate;
-        uint8 rate = peerInfo[adminAddr].agreedRate;
-        require(poolToDate == peerInfo[adminAddr].expectedPool, 'Pool withdraw not ready');
-        require(!peerInfo[adminAddr].members[nextId].isPaid, 'Already received');
-        require(peerInfo[adminAddr].members[nextId].isCreditor, 'Not eligible');        
+        uint8 nextId = peerInfo[g].groupSize;
+        uint poolToDate = peerInfo[g].totalPoolToDate;
+        uint8 rate = peerInfo[g].agreedRate;
+        require(poolToDate == peerInfo[g].expectedPool, 'Pool withdraw not ready');
+        require(!peerInfo[g].members[nextId].isPaid, 'Already received');
+        require(peerInfo[g].members[nextId].isCreditor, 'Not eligible');        
         require(_safeTransferBUSD(address(this), next, poolToDate), 'Something went wrong.');
-        peerInfo[adminAddr].members[nextId].payDay = block.timestamp.add(peerInfo[adminAddr].maxDuration);
+        peerInfo[g].members[nextId].payDay = block.timestamp.add(peerInfo[g].maxDuration);
 
-        peerInfo[adminAddr].members[nextId].debt = poolToDate.add(poolToDate.mul(rate).div(100));
-        peerInfo[adminAddr].members[nextId].isCreditor = false;
-        peerInfo[adminAddr].groupSize -= 1;
+        peerInfo[g].members[nextId].debt = poolToDate.add(poolToDate.mul(rate).div(100));
+        peerInfo[g].members[nextId].isCreditor = false;
+        peerInfo[g].groupSize -= 1;
         
-        peerInfo[adminAddr].totalPoolToDate -= poolToDate;
-        peerInfo[adminAddr].members[nextId].isPaid = true;
+        peerInfo[g].totalPoolToDate -= poolToDate;
+        peerInfo[g].members[nextId].isPaid = true;
         
         emit Deposit(next, poolToDate);
         
         return true;
     }
 
-    function payBack(address _adminAddr, uint8 _position, uint _owings) external isABrother(_msgSender(), _position) isBinded(_adminAddr, _position, _msgSender()) returns(bool) {
-        uint outstandingDebt = peerInfo[_adminAddr].members[_position].debt;
-        uint penalty = peerInfo[_adminAddr].penaltyFee;
-        uint8 grpSize = peerInfo[_adminAddr].groupSize;
-        require(!peerInfo[_adminAddr].members[_position].isCreditor && outstandingDebt > 0 && _owings == outstandingDebt, 'No previous debt Or payback too low');
-        if(block.timestamp > peerInfo[_adminAddr].members[_position].payDay){
-            outstandingDebt += penalty;
+    function payBack(address _adminAddr, uint _owings) external isABrother(_adminAddr, _msgSender()) isBinded(_adminAddr, _msgSender()) returns(bool) {
+        address a = _adminAddr;
+        uint8 pos = peerInfo[a].position[_msgSender()];
+        uint out_Debt = peerInfo[a].members[pos].debt;
+        uint pen = peerInfo[a].penaltyFee;
+        uint8 gS = peerInfo[a].groupSize;
+        
+        require(!peerInfo[a].members[pos].isCreditor && out_Debt > 0 && _owings == out_Debt, 'No previous debt Or payback too low');
+        if(block.timestamp > peerInfo[a].members[pos].payDay){
+            out_Debt += pen;
             } else {
-                outstandingDebt = outstandingDebt;
+                out_Debt = out_Debt;
         }
-        bool tf = _safeTransferBUSD(_msgSender(), address(this), outstandingDebt);
+        bool tf = _safeTransferBUSD(_msgSender(), address(this), out_Debt);
         if(tf) {
-            peerInfo[_adminAddr].members[_position].debt -= outstandingDebt;
-            peerInfo[_adminAddr].members[_position].isCreditor = true;
+            peerInfo[a].members[pos].debt -= out_Debt;
+            peerInfo[a].members[pos].isCreditor = true;
         } else { return false; }
-        if(grpSize == 0) {
-            peerInfo[_adminAddr].staged ++;
-            peerInfo[_adminAddr].locked = true;
-            exist[_adminAddr] = true;
+        if(gS == 0) {
+            peerInfo[a].staged ++;
+            peerInfo[a].locked = true;
+            exist[a] = true;
         }
         return true;
         
     }
 
     function extend(uint8 _targetPosition, uint extenda) public returns(bool) {
-        require(isABigBrother[_msgSender()], 'Unauthorized user');
+        require(isABigBrother[_msgSender()], 'Unauthorized ADMIN');
         require(extenda <= 14, 'Max extension time exceeded');
-        // address targ = soulBrothers[_msgSender()][_targetPosition];
         peerInfo[_msgSender()].members[_targetPosition].payDay += (extenda.mul(1 days));
         return true;
     }
@@ -545,11 +560,23 @@ contract PeerBrothers is SafeBROsToken {
     }
     
     function adjustPenalty(uint _newPenaltyFee) public returns(bool) {
-        require(isABigBrother[_msgSender()], 'Not Authorized');
+        
         require(block.timestamp <= peerInfo[_msgSender()].permitTime, 'Grace period expires');
         peerInfo[_msgSender()].penaltyFee = _newPenaltyFee;
 
         emit PenaltyChanged(_msgSender(), _newPenaltyFee);
+        return true;
+    }
+    
+    function changeRate(uint8 newRate) public returns(bool) {
+        address ms = _msgSender();
+        require(isABigBrother[ms], 'Not Authorized ADMIN');
+        uint fq = peerInfo[ms].frequency;
+        if(fq == 0) {
+            peerInfo[ms].agreedRate = newRate;
+        } else {
+            revert('MAX frequency reached');
+        }
         return true;
     }
 
