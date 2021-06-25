@@ -265,7 +265,6 @@ contract PeerBrothers is SafeBROsToken {
         uint8 iterator;
         mapping(address => uint) index;
         mapping(uint => BrotherInfo) members;
-        mapping(address => mapping(uint => address)) soulBrothers;
     }
     
     struct BrotherInfo {
@@ -310,7 +309,9 @@ contract PeerBrothers is SafeBROsToken {
 
     mapping(uint8 => AirdropInfo) public airdrops;
     
-    mapping(address => address) public adminMemberMap;
+    mapping(address => mapping(uint => address)) soulBrothers;
+    
+    // mapping(address => address) public adminMemberMap;
 
     mapping(address => bool) public isAdmin;
     
@@ -431,7 +432,7 @@ contract PeerBrothers is SafeBROsToken {
             address k = _msgSender();
             PeerInfo storage _new = peerInfo[k];
             require(groupStatus, 'Not available at this time');
-            require(peerSize <= 255, 'Max member limit exceeded');
+            require(peerSize < 2**8, 'Max member limit exceeded');
             require(_deductFst(address(this), _unitAmount), 'Something went wrong');
             require(_useInDays <= 7, 'But why? Consider rest');
             // require(peerInfo[k].round == 0, 'Current round not ended');
@@ -482,9 +483,9 @@ contract PeerBrothers is SafeBROsToken {
             peerInfo[adm].actualPoolSize += credit;
             exist[m] = true;
             peerInfo[adm].members[pos].isCreditor = true;
-            peerInfo[adm].soulBrothers[adm][pos] = m;
+            soulBrothers[adm][pos] = m;
             peerInfo[adm].index[m] = pos;
-            adminMemberMap[adm] = m;
+            // adminMemberMap[adm] = m;
             peerInfo[adm].iterator ++;
     }
     
@@ -530,13 +531,13 @@ contract PeerBrothers is SafeBROsToken {
         address a = adminAddr;
         uint c_index = peerInfo[a].iterator;
         // require(peerInfo[a].round == 0, 'Current round not ended');
-        require(c_index <= peerInfo[a].peerSize, 'No vacant index for this peer');
+        require(c_index < peerInfo[a].peerSize, 'No vacant index for this peer');
         uint remittance = peerInfo[a].unit;
         uint ap = c_index + 1;
         require(peerInfo[a].members[ap].addr == address(0) && p != a, 'Denied: Multiple registration');
         uint totalUSDPool = peerInfo[a].actualPoolSize;
         uint expectedPoolBal = peerInfo[a].expectedPool;
-        if((totalUSDPool.add(remittance) <= expectedPoolBal)){
+        if((totalUSDPool.add(remittance) < expectedPoolBal)){
             require(_deductFst(address(this), remittance), 'Error');
             require(_safeTransferBUSD(p, address(this), remittance), 'Not completed');
             _setParams(p, remittance, a, ap);
@@ -559,9 +560,13 @@ contract PeerBrothers is SafeBROsToken {
     function getFinance(address adminAddr) public isExist isTied(adminAddr) returns(bool) {
         address g = adminAddr;
         address m = _msgSender();
+        uint next_p = peerInfo[g].iterator;
+        address next = soulBrothers[g][next_p];
+        
+        require(m == next, 'Not your turn');
 
         uint poolToDate = peerInfo[g].actualPoolSize;
-        uint pos = peerInfo[g].index[m];
+        uint pos = peerInfo[g].index[next];
         uint use_P = peerInfo[g].use_days.mul(1 days);
         uint debt = peerInfo[g].members[pos].expectedRepaymentAmt;
         uint i = peerInfo[g].interest;
@@ -577,8 +582,7 @@ contract PeerBrothers is SafeBROsToken {
 
         peerInfo[g].actualPoolSize -= poolToDate;
         peerInfo[g].members[pos].isPaid = true;
-        address next = peerInfo[g].soulBrothers[g][pos + 1];
-        adminMemberMap[g] = next;
+        peerInfo[g].iterator --;
         
         emit Deposit(m, poolToDate);
      
