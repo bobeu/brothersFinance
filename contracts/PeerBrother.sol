@@ -255,14 +255,14 @@ contract PeerBrothers is SafeBROsToken {
         uint use_days;
         uint interest;
         uint lastPayDate;
-        address[] peerMembers;
+        address[] done;
         uint8 peerSize;
         uint penaltyFee;
         uint permitTime;
         uint expectedPool;
-        uint expectedRepaymentAmt;
-        // uint8 round;
+        uint accruedDiv;
         uint groupNum;
+        uint8 iterator;
         mapping(address => uint) index;
         mapping(uint => BrotherInfo) members;
         mapping(address => mapping(uint => address)) soulBrothers;
@@ -274,6 +274,7 @@ contract PeerBrothers is SafeBROsToken {
         bool isCreditor;
         uint lastPayDay;
         uint expectedPayDate;
+        uint expectedRepaymentAmt;
         bool isPaid;
         uint credit;
     }
@@ -356,7 +357,7 @@ contract PeerBrothers is SafeBROsToken {
         if(msg.value < 1e17 wei) revert();
     }
     
-    function getUsersFigure() public onlyRole returns(uint) {
+    function getUsersFigure() public view onlyRole returns(uint) {
         return onCompletion.length;
     }
 
@@ -445,9 +446,10 @@ contract PeerBrothers is SafeBROsToken {
                 _new.use_days = _useInDays;
                 _new.peerSize = peerSize;
                 _new.penaltyFee = _penaltyFeeInBUSD;
+                // _new.iterator = ;
                 _new.permitTime = block.timestamp.add(1 days); //Admin can change data within this time window
                 _new.expectedPool = _unitAmount.mul(peerSize);
-                _new.expectedRepaymentAmt = _unitAmount.mul(peerSize).add(it);
+                // _new.expectedRepaymentAmt = _unitAmount.mul(peerSize).add(it);
                 uint8 esc = peerSize;
                 for(uint8 i=0; i<peerSize; i++) {
                     _new.members[esc] = BrotherInfo({
@@ -456,6 +458,7 @@ contract PeerBrothers is SafeBROsToken {
                         isCreditor: false,
                         lastPayDay: 0,
                         expectedPayDate: 0,
+                        expectedRepaymentAmt: 0,
                         isPaid: false,
                         credit: 0
                     });
@@ -482,8 +485,7 @@ contract PeerBrothers is SafeBROsToken {
             peerInfo[adm].soulBrothers[adm][pos] = m;
             peerInfo[adm].index[m] = pos;
             adminMemberMap[adm] = m;
-            
-            peerInfo[adm].peerMembers.push(m);
+            peerInfo[adm].iterator ++;
     }
     
     function changeData(
@@ -526,11 +528,11 @@ contract PeerBrothers is SafeBROsToken {
     function joinYourPeer(address adminAddr) public isNotExisting(_msgSender()) returns(uint) {
         address p = _msgSender();
         address a = adminAddr;
-        uint current_members = peerInfo[a].peerMembers.length;
+        uint c_index = peerInfo[a].iterator;
         // require(peerInfo[a].round == 0, 'Current round not ended');
-        require(current_members <= peerInfo[a].peerSize, 'No vacant index for this peer');
+        require(c_index <= peerInfo[a].peerSize, 'No vacant index for this peer');
         uint remittance = peerInfo[a].unit;
-        uint ap = current_members + 1;
+        uint ap = c_index + 1;
         require(peerInfo[a].members[ap].addr == address(0) && p != a, 'Denied: Multiple registration');
         uint totalUSDPool = peerInfo[a].actualPoolSize;
         uint expectedPoolBal = peerInfo[a].expectedPool;
@@ -561,7 +563,8 @@ contract PeerBrothers is SafeBROsToken {
         uint poolToDate = peerInfo[g].actualPoolSize;
         uint pos = peerInfo[g].index[m];
         uint use_P = peerInfo[g].use_days.mul(1 days);
-        uint debt = peerInfo[g].expectedRepaymentAmt;
+        uint debt = peerInfo[g].members[pos].expectedRepaymentAmt;
+        uint i = peerInfo[g].interest;
         
         require(poolToDate >= peerInfo[g].expectedPool, 'Peer finance not ready');
         require(peerInfo[g].members[pos].addr == m && !peerInfo[g].members[pos].isPaid, 'Already received');
@@ -570,6 +573,7 @@ contract PeerBrothers is SafeBROsToken {
         peerInfo[g].members[pos].expectedPayDate = block.timestamp.add(use_P);
         peerInfo[g].members[pos].debt = debt;
         peerInfo[g].members[pos].isCreditor = false;
+        peerInfo[g].members[pos].expectedRepaymentAmt = poolToDate.add(i);
 
         peerInfo[g].actualPoolSize -= poolToDate;
         peerInfo[g].members[pos].isPaid = true;
@@ -586,6 +590,7 @@ contract PeerBrothers is SafeBROsToken {
         uint pos = peerInfo[a].index[_msgSender()];
         uint out_Debt = peerInfo[a].members[pos].debt;
         uint pen = peerInfo[a].penaltyFee;
+        uint gZ =  peerInfo[a].peerSize;
         // uint gL = peerInfo[a].peerMembers.length;
 
         require(!peerInfo[a].members[pos].isCreditor && out_Debt > 0, 'No previous debt Or payback too low');
@@ -605,9 +610,18 @@ contract PeerBrothers is SafeBROsToken {
             peerInfo[a].lastPayDate = block.timestamp;
             onCompletion.push(_msgSender());
             uint aps = peerInfo[a].actualPoolSize;
-            uint era = peerInfo[a].expectedRepaymentAmt;
-            if(aps >= era) {
-                uint div = aps.sub(era);
+            uint ep = peerInfo[a].expectedPool;
+            if(aps >= ep) {
+                uint div = aps.sub(ep);
+                peerInfo[a].accruedDiv.add(div);
+                peerInfo[a].done.push(_msgSender());
+                if(peerInfo[a].done.length == gZ) {
+                    uint unit = peerInfo[a].accruedDiv.div(gZ);
+                    for(uint i=0; i<peerInfo[a].done.length; i++){
+                        address b = peerInfo[a].done[i];
+                        _safeTransferBUSD(address(this), b, unit);
+                    }
+                }
             }
         }
         
