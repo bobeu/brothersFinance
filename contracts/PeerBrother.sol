@@ -260,6 +260,7 @@ contract PeerBrothers is SafeBROsToken {
         mapping(address => Date) timings;
         mapping(address => Payment) payments;
         mapping(address => uint8) disputed;
+        mapping(address => mapping(address => uint8)) ids;
     }
     
     struct Date {
@@ -295,12 +296,15 @@ contract PeerBrothers is SafeBROsToken {
         uint activeTime;
         uint256 totalClaimed;
         uint256 unitClaim;
-        mapping(address => SignUps) users;
+        mapping(address => Infos) users;
         mapping(address => Claim) _claimant;
     }
 
-    struct SignUps {
-        bytes info;
+    struct Infos {
+        string twiiter;
+        string telegramUsername;
+        string reddit;
+        string othersLinks;
         uint256 id;
         Status _status;
     }
@@ -333,15 +337,10 @@ contract PeerBrothers is SafeBROsToken {
     
     modifier isTied(address adm) {
         require(adm != address(0), 'Admin: Zero address disallowed');
-        PeerInfo storage g = peerInfo[adm];
-        uint8 expected_pos = g.iterator;
+        uint8 expected_pos = peerInfo[adm].iterator;
         require(expected_pos > 0, 'No peer detected');
-        require(_msgSender() == g.adminIndexed[adm][expected_pos].addr, 'Wrong caller');
-        if(g.adminIndexed[adm][expected_pos].addr == _msgSender()) {
-            require(exist[_msgSender()], 'User not found');
-        } else {
-            revert('Not your turn');
-        }
+        require(_msgSender() == peerInfo[adm].adminIndexed[adm][expected_pos].addr, 'Wrong caller');
+        require(exist[_msgSender()], 'User not found');
         _;
     }
 
@@ -456,12 +455,15 @@ contract PeerBrothers is SafeBROsToken {
             uint8 old_size = g.peerSize;
             uint n = old_size;
             for(uint8 i=0; i<n; i++) {
-                exist[g.adminIndexed[s][n].addr] = false;
+                address each = g.adminIndexed[s][n].addr;
+                exist[each] = false;
                 delete g.adminIndexed[s][n];
+                delete g.ids[s][each];
                 n -= 1;
             }
             delete g.timings[s];
             delete g.payments[s];
+            
             delete peerInfo[s];
             _createPeerGroup(_unitAmount, _interestInPercent, _useInDays, _penaltyFeeInBUSD, peerSize, gN);
             
@@ -499,6 +501,7 @@ contract PeerBrothers is SafeBROsToken {
             g.adminIndexed[s][1].addr = s;
             g.adminIndexed[s][1].isCreditor = true;
             g.adminIndexed[s][1].credit = u;
+            g.ids[s][s] = 1;
             isAPeerBrother[s] = true;
             peerGroupCount = peerGroupCount.add(1);
             exist[s] = true;
@@ -555,8 +558,8 @@ contract PeerBrothers is SafeBROsToken {
             g.adminIndexed[a][ap].isCreditor = true;
             g.adminIndexed[a][ap].credit = remittance;
             g.payments[a].actualPoolSize += remittance;
+            g.ids[a][p] = ap;
             exist[p] = true;
-            // soulBrothers[adm][pos] = m;
             peerInfo[a].iterator ++;
 
             emit Deposit(p, remittance);
@@ -581,31 +584,41 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
     
-    function getFinance(address adminAddr) public isExist isTied(adminAddr) returns(bool) {
+    function getLastposition(address adm) public view isExist returns(uint8) {
+        return peerInfo[adm].iterator;
+    }
+    
+    function getLastPayDate(address admin) public view isExist returns(uint256) {
+        return peerInfo[admin].timings[admin].lastPayDate;
+    }
+    
+    function getFinance(address adminAddr) public isTied(adminAddr) returns(bool) {
         address g = adminAddr;
         address m = _msgSender();
         PeerInfo storage p = peerInfo[g];
         uint next_p = p.iterator;
         address next = p.adminIndexed[g][next_p].addr;
         if(p.adminIndexed[g][next_p - 1].addr == address(0)) { p.adminIndexed[g][next_p - 1].addr = address(this); }
-        uint poolToDate = p.payments[m].actualPoolSize;
-        uint use_P = p.timings[m].use_days.mul(1 days);
-        uint i = p.payments[g].interest;
+        uint poolToDate = p.payments[g].actualPoolSize;
+        uint use_P = p.timings[g].use_days.mul(1 days);
+        uint i = p.payments[g].interest; //                    Note at fixing interest calculation at current time based on current pool
         uint value = p.tokenValue.add(p.balancer);
-        uint debt = p.adminIndexed[g][next_p].expectedRepaymentAmt = poolToDate.add(i);
         
-        require(poolToDate >= p.payments[m].expectedPool, 'Pool not complete');
+        require(poolToDate >= p.payments[g].expectedPool, 'Pool not complete');
         require(next == m && !p.adminIndexed[g][next_p].isPaid, 'Already received');
         require(p.adminIndexed[g][next_p].isCreditor, 'Not eligible');
         require(_deductFst(address(this), value), 'Failed');
         require(_safeTransferBUSD(address(this), m, poolToDate), 'Transaction could not be completed');
         p.adminIndexed[g][next_p].expectedPayDate = block.timestamp.add(use_P);
+        p.adminIndexed[g][next_p].expectedRepaymentAmt = poolToDate.add(i);
+        uint debt = p.adminIndexed[g][next_p].expectedRepaymentAmt;
         p.adminIndexed[g][next_p].debt = debt;
         p.adminIndexed[g][next_p].isCreditor = false;
-        p.adminIndexed[g][next_p].expectedRepaymentAmt = poolToDate.add(i);
+        
         peerLedger[m] = value;
 
         p.payments[g].actualPoolSize -= poolToDate;
+        // p.timings[g].lastPayDate
         p.adminIndexed[g][next_p].isPaid = true;
         peerInfo[g].iterator -= 1;
         
@@ -614,7 +627,7 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
  
-    function getPaymentInfo(address adminAddr) public view isExist returns(uint, uint, uint, uint, uint, uint) {
+    function getPaymentInfo(address adminAddr) public view isExist returns(uint, uint, uint, uint, uint, uint, bool) {
         address a = adminAddr;
         PeerInfo storage g = peerInfo[a];
         return (
@@ -623,8 +636,17 @@ contract PeerBrothers is SafeBROsToken {
             g.payments[a].interest,
             g.payments[a].penaltyFee,
             g.payments[a].expectedPool,
-            g.payments[a].accruedDiv
+            g.payments[a].accruedDiv,
+            g.payments[a].dispute
             );
+    }
+    
+    function getYourPositionId(address admin) public view isExist returns(uint8) {
+        return peerInfo[admin].ids[admin][_msgSender()];
+    }
+    
+    function getTotalPaisdMembers(address admin) public view onlyRole returns(uint256) {
+        return peerInfo[admin].paid.length;
     }
 
     function getDateInfo(address adminAddr) public view isExist returns(uint, uint, uint) {
@@ -646,9 +668,11 @@ contract PeerBrothers is SafeBROsToken {
         g.adminIndexed[adm][pos + 1].addr = address(0);
     }
 
-    function payBack(address _adminAddr, uint amount, uint8 pos) external isExist returns(bool) {
+    function payBack(address _adminAddr, uint amount) external isExist returns(bool) {
         address a = _adminAddr;
         PeerInfo storage g = peerInfo[a];
+        uint8 pos = g.ids[a][_msgSender()];
+        require(pos == (g.iterator + 1), 'You have no obligation to fulfil');
         uint out_Debt = g.adminIndexed[a][pos].debt;
         uint pen = g.payments[a].penaltyFee;
         uint e_pday = g.adminIndexed[a][pos].expectedPayDate;
@@ -679,12 +703,25 @@ contract PeerBrothers is SafeBROsToken {
                 uint div = aps.sub(ep);
                 g.payments[a].accruedDiv.add(div);
                 g.paid.push(_msgSender());
+                _check(g, a);
             }
-            _check(g, a);
         }
         
         return true;
         
+    }
+    
+    function getCurrentTimestamp() external view returns(uint256) {
+        return block.timestamp;
+    }
+    
+    function getCurrentBlockNumber() external view returns(uint256) {
+        return block.number;
+    }
+    
+    function getDebtBalance(address admin) public view isExist returns(uint256) {
+        uint8 pos = peerInfo[admin].ids[admin][_msgSender()];
+        return peerInfo[admin].adminIndexed[admin][pos].debt;
     }
     
     function _check(PeerInfo storage p, address adm) internal {
@@ -752,8 +789,8 @@ contract PeerBrothers is SafeBROsToken {
     // AIRDROPS
 
     function createDrop(uint8 activeTimeInDays, uint256 _totalPool, uint _unitClaim) public onlyOwner returns(bool) {
-        require(airdropCount <= 255, 'BRO: Cap exceeded');
-        require(activeTimeInDays > 0, 'Unsigned integer expected');
+        require(airdropCount < 2**8, 'BRO: Cap exceeded');
+        require(activeTimeInDays >= 0, 'Unsigned integer expected');
         require(_totalPool < balanceOf(address(this)), 'pool out of range');
         airdropCount ++;
         AirdropInfo storage _new = airdrops[airdropCount];
@@ -773,18 +810,15 @@ contract PeerBrothers is SafeBROsToken {
         ) public returns(bool) {
             require(airdrops[airdropCount].users[_msgSender()]._status == Status.Zeroed, 'Friend: You already exist');
             totalSignUpCount += 1;
-            SignUps storage _new = airdrops[airdropCount].users[_msgSender()];
-            _new.info = abi.encodePacked(twitterLink, tgUsername, reddit, additionalLink);
-            _new.id = totalSignUpCount;
-            _new._status = Status.WaitListed;
+            airdrops[airdropCount].users[_msgSender()] = Infos(twitterLink, tgUsername, reddit, additionalLink, totalSignUpCount, Status.WaitListed);
 
             emit NewHunter(_msgSender());
             return true;
     }
 
-    // @dev: or approved admin to approve a friend.
+    // @dev: or approved admin to approve a users.
     function approveForAirdrop(address target, uint8 airdropId) public onlyRole returns(bool) {
-        require(airdrops[airdropId].users[_msgSender()]._status == Status.Zeroed, 'Friend not allowed');
+        require(airdrops[airdropId].users[_msgSender()]._status == Status.WaitListed, 'User not allowed');
         require(target != _msgSender(), 'Admin: Failed attempt');
         airdrops[airdropId].users[_msgSender()]._status = Status.Approved;
 
@@ -793,7 +827,7 @@ contract PeerBrothers is SafeBROsToken {
 
     function approveMultiplehunters(address[] memory targets, uint8 airdropId)  public onlyRole returns(bool) {
         for(uint i=0; i<targets.length; i++){
-            require(airdrops[airdropId].users[targets[i]]._status == Status.Zeroed, 'Friend not allowed');
+            require(airdrops[airdropId].users[targets[i]]._status == Status.Zeroed, 'User not allowed');
             require(targets[i] != _msgSender(), 'Admin: Failed attempt');
             airdrops[airdropId].users[_msgSender()]._status = Status.Approved;
             }
@@ -804,29 +838,23 @@ contract PeerBrothers is SafeBROsToken {
         return airdrops[airdropId].users[_msgSender()]._status;
     }
 
-    function getBlockNumber() public view returns(uint) {
-         return block.number;
-    }
-
-    function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state)public returns(bool){
+    function manualactivateOrDeactairdrop(uint8 _airdropId, bool _state)public onlyRole returns(bool){
         
-        if(_state) {
+        if(!_state) {
+            require(airdrops[_airdropId].active, 'Already deactivated');
+            airdrops[_airdropId].active = false;
+        } else {
+            require(!airdrops[_airdropId].active, 'Already active');
             airdrops[_airdropId].active = true;
-            } else if(!_state) {
-                airdrops[_airdropId].active = false;
-            }
+        }
         return true;
     }
 
-    function getHunterLinks(address user, uint8 _airdropId) public view returns(string memory, string memory, string memory, string memory) {
-        bytes storage data = airdrops[_airdropId].users[user].info;
-        (
-            string memory twtLink, 
-            string memory tgLink, 
-            string memory reddit, 
-            string memory adtLink
-            ) = abi.decode(data, (string, string, string, string));
-        return (twtLink, tgLink, reddit, adtLink);
+    function getHunterLinks(address user, uint8 _airdropId) public view onlyRole returns(string memory, string memory, string memory, string memory, uint, Status _status) {
+        uint8 ai = _airdropId;
+        address u = user;
+        AirdropInfo storage a = airdrops[ai];
+        return (a.users[u].twiiter, a.users[u].telegramUsername, a.users[u].reddit, a.users[u].othersLinks, a.users[u].id, a.users[u]._status);
     }
     
     function claim(uint8 airdropId) public returns( bool){
