@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
-import './BroToken.sol';
+// import './BroToken.sol';
 
 
 interface BUSD {
@@ -29,8 +29,6 @@ contract SafeBROsToken is ERC20, Ownable {
 
     mapping(address => bool) private suspension;
 
-
-   
     /**
      * @dev Sets the values for {name} and {symbol}, initializes {decimals} with
      * a default value of 18.
@@ -40,7 +38,7 @@ contract SafeBROsToken is ERC20, Ownable {
      * All three of these values are immutable: they can only be set once during
      * construction.
      */
-    constructor(uint supply) ERC20("BroToken", "BROT") public {
+    constructor(uint supply) ERC20("BroToken", "BROT") {
         _mint(_msgSender(), (supply * 10**18));
     }
 
@@ -360,7 +358,7 @@ contract PeerBrothers is SafeBROsToken {
         _;
     }
 
-    constructor(uint _supply, BUSD _busd) public SafeBROsToken(_supply) {
+    constructor(uint _supply, BUSD _busd) SafeBROsToken(_supply) {
         isAdmin[_msgSender()] = true;
         busd = _busd;
     }
@@ -408,16 +406,15 @@ contract PeerBrothers is SafeBROsToken {
         return groupStatus;
     } 
     
-    function changePeerActivityStatus(bool state) public onlyOwner returns(string memory) {
+    function changePeerActivityStatus(bool state) public onlyOwner returns(bool) {
         if(!state){
             require(groupStatus, 'Already inactive');
             groupStatus = false;
-            return 'Activity is restricted';
         } else if(state){
             require(!groupStatus, 'Already active');
             groupStatus = true;
-            return 'Activity has been allowed';
         }
+        return true;
         
     }
     
@@ -428,7 +425,7 @@ contract PeerBrothers is SafeBROsToken {
         return true;
     }
     
-    function _safeTransferBUSD(address sender, address recipient, uint _amount) internal view returns(bool) {
+    function _safeTransferBUSD(address sender, address recipient, uint _amount) internal pure returns(bool) {
         // uint previousBalance = busd.balanceOf(sender);
         // busd.transfer(recipient, _amount);
         // require(busd.balanceOf(sender).add(_amount) == previousBalance, 'Something went wrong');
@@ -659,8 +656,8 @@ contract PeerBrothers is SafeBROsToken {
         );
     }
     
-    function _liquidate(PeerInfo storage g, address adm) internal {
-        g = peerInfo[adm];
+    function _liquidate(address adm) internal {
+        PeerInfo storage g = peerInfo[adm];
         uint8 pos = g.iterator;
         address c_beneficiary = g.adminIndexed[adm][pos + 1].addr;
         peerLedger[c_beneficiary] = 0;
@@ -683,7 +680,7 @@ contract PeerBrothers is SafeBROsToken {
         } else if(block.timestamp > e_pday && block.timestamp >= e_pday.add(1 days)) {
             g.payments[a].dispute = true;
             g.disputed[a] = pos;
-            _liquidate(g, a);
+            _liquidate(a);
         } else {
             out_Debt = out_Debt;
         }
@@ -703,7 +700,7 @@ contract PeerBrothers is SafeBROsToken {
                 uint div = aps.sub(ep);
                 g.payments[a].accruedDiv.add(div);
                 g.paid.push(_msgSender());
-                _check(g, a);
+                _check(a);
             }
         }
         
@@ -724,8 +721,8 @@ contract PeerBrothers is SafeBROsToken {
         return peerInfo[admin].adminIndexed[admin][pos].debt;
     }
     
-    function _check(PeerInfo storage p, address adm) internal {
-        p = peerInfo[adm];
+    function _check(address adm) internal {
+        PeerInfo storage p = peerInfo[adm];
         uint8 gZ = p.peerSize;
         uint aps = p.payments[adm].actualPoolSize;
         uint tkv = p.tokenValue;
