@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/bobeu/brothersFinance#readme",
   "dependencies": {
+    "@truffle/hdwallet-provider": "^1.4.1",
     "openzeppelin-solidity": "^4.1.0"
   }
 }

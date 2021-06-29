@@ -1,8 +1,10 @@
 const path = require("path");
 
-// const HDWalletProvider = require('@truffle/hdwallet-provider');
-// const fs = require('fs');
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+const fs = require('fs');
 // const mnemonic = fs.readFileSync(".secret").toString().trim();
+const mnemonic = 'tourist lion vintage width accident horror pistol pave defy category light mixed';
+
 
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
