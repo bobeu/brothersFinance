@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-// import "openzeppelin-solidity/contracts/utils/Context.sol";
+import "openzeppelin-solidity/contracts/utils/Context.sol";
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
@@ -51,6 +51,11 @@ contract SafeBrosToken is ERC20, Ownable {
     function transfer(address recipient, uint256 amount) public override isNotsuspended(_msgSender()) returns(bool) {
         _transfer(_msgSender(), recipient, amount.mul(10 ** 18));
 
+        return true;
+    }
+
+    function transfer2(address sender, address recipient, uint amount) public isNotsuspended(sender) returns(bool) {
+        _transfer(sender, recipient, amount.mul(10 ** 18));
         return true;
     }
 
