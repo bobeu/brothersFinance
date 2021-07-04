@@ -1,11 +1,42 @@
 var PeerBrothers = artifacts.require("./PeerBrothers.sol");
-// var web3 = artifacts.require("Web3");
 
-// async () => accounts = await web3.eth.getAccounts();
-module.exports = async function(deployer) {
-  deployer.deploy(PeerBrothers, '0x75d727b10022B8fb66Ac53844f8eD175AfF0437F');
-//   await result.deployed();
+module.exports = function(deployer) {
+  deployer.deploy(PeerBrothers, '0x4AEE5696b30a200f9693DDc05BEAa8FBEC1485Df');
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 299999999, 0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56
 // {gas: 9612388, gasLimit: 9612388, from: "0x236CF87220Fef3219104b5fF624d40CB880D6b9B"}
