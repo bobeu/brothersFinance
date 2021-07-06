@@ -380,7 +380,7 @@ contract PeerBrothers is Ownable, Periphery{
         return peerInfo[admin].ids[admin][_msgSender()];
     }
     
-    function getTotalPaisdMembers(address admin) public view onlyRole returns(uint256) {
+    function getTotalPaidMembers(address admin) public view onlyRole returns(uint256) {
         return peerInfo[admin].paid.length;
     }
 
