@@ -1,91 +1,29 @@
-import React, { Component } from "react";
-import SafeBROsToken from "./contracts/SafeBROsToken.json";
-import getWeb3 from "./getWeb3";
+import "bootstrap/dist/css/bootstrap.min.css";
+
+import React from 'react';
+import HomePage from "./components/HomePage";
+import AboutPage from "./components/AboutPage";
+import TokenPage from "./components/TokenPage";
+import Header from "./components/Common/Header";
 
 import "./App.css";
 
-class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null, name: null, symbol: "", Decimal: 0 };
-
-  componentDidMount = async () => {
-    try {
-      // Get network provider and web3 instance.
-      const web3 = await getWeb3();
-
-      // Use web3 to get the user's accounts.
-      const accounts = await web3.eth.getAccounts();
-
-      // Get the contract instance and contract address.
-      const networkId = await web3.eth.net.getId();
-      const deployedNetwork = SafeBROsToken.networks[networkId];
-      const instance = new web3.eth.Contract(SafeBROsToken.abi, deployedNetwork.address);
-      const contractAddress = deployedNetwork.address;
-
-      // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      this.setState({ 
-        web3, 
-        accounts, 
-        contract: instance , 
-        name: null, 
-        symbol: "",
-        Decimal: 0, 
-        Address: contractAddress,
-        balance: 0
-      }, this.runExample);
-    } catch (error) {
-      // Catch any errors for any of the above operations.
-      alert(
-        `Failed to load web3, accounts, or contract. Check console for details.`,
-      );
-      console.error(error);
-    }
-  };
-
-  runExample = async () => {
-    const {accounts, contract} = this.state;
-    const value = 459;
-    // Stores a given value, 5 by default.
-    // await contract.methods.setCompleted(value).send({ from: accounts[0] });
-
-    // Get the value from the contract to prove it worked.
-    const _name = await contract.methods.name().call();
-    const _symbol = await contract.methods.symbol().call();
-    const _decimal = await contract.methods.decimals().call();
-    const _totalSupply = await contract.methods.totalSupply().call();
-    const _balance = await contract.methods.balanceOf(accounts[0]).call();
-
-    // Update state with the result.
-    this.setState({ storageValue: _totalSupply, name: _name, Decimal: _decimal, symbol: _symbol, balance: _balance});
-  };
-
-  render() {
-    if (!this.state.web3) {
-      return <div>Loading Web3, accounts, and contract...</div>;
-    }
-    return (
-      <div className="App">
-        <h2>Welcome!</h2>
-        <p><strong>{this.state.accounts[0]}</strong></p>
-        <h3>Contract Address: <strong>{this.state.Address}</strong></h3>
-        <p>Interact with <strong>BRO TOKEN</strong> below.</p>
-        <p>
-          Trying out some functions:<br></br> 
-          <strong>Token name: {this.state.name}</strong><br></br>
-          <strong>Symbol: {this.state.symbol}</strong><br></br>
-          <strong>Decimal: {this.state.Decimal}</strong>
-        </p>
-        <div>Total Supply: {this.state.storageValue}</div><br></br>
-        <div class="Bal">User balance: {this.state.balance}</div><br></br>
-      </div>
-    );
+function App() {
+  function getPage() {
+    const route = window.location.pathname;
+    if(route === "/About") return <AboutPage />;
+    else if(route === "/Token") return <TokenPage />;
+    return <HomePage />;
   }
+  return (
+    <div className="container-fluid">
+      <Header />
+      {getPage()}
+    </div>
+  );
 }
 
 export default App;
-
-
-
 
 
 
