@@ -19,8 +19,7 @@ function TokenPage() {
   //   initialize
   // ] = useState();
 
-  useEffect(() => {
-    (async () => {
+  useEffect(async () => {
       try{
         const web3 = await getWeb3();
         const accounts = await web3.eth.getAccounts();
@@ -48,8 +47,7 @@ function TokenPage() {
         console.error(error);
       }
 
-    })
-  }, []);
+    });
 
 
   async function initialize () {
