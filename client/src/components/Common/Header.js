@@ -1,9 +1,15 @@
 import React from "react";
+import { NavLink } from "react-router-dom";
 
 function Header () {
+    const active_Style = {color : "orange"};
     return (
         <nav>
-            <a href="/Home">Home</a> | <a href='/About'>About</a> | <a href='/Token'>Token</a>
+            <NavLink activeStyle={active_Style} to="/" exact >Home</NavLink>
+            {" | "} 
+            <NavLink activeStyle={active_Style} to='/About'>About</NavLink>
+            {" | "} 
+            <NavLink activeStyle={active_Style} to='/Token'>Token</NavLink>
         </nav>
     );
 }

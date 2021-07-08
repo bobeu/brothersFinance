@@ -2,14 +2,15 @@ import React from 'react';
 // import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
-import ReactDOM from 'react-dom';
-// import { render } from 'react-dom';
-// import HomePage from './components/HomePage';
-// import AboutPage from './components/AboutPage';
+// import ReactDOM from 'react-dom';
+import { render } from "react-dom";
+import { BrowserRouter as Router } from "react-router-dom";
 import * as serviceWorker from './serviceWorker';
 
-ReactDOM.render(
-    <App />, 
+render(
+    <Router>
+        <App />,
+    </Router>,
     document.getElementById('root')
 );
 

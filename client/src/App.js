@@ -4,21 +4,33 @@ import React from 'react';
 import HomePage from "./components/HomePage";
 import AboutPage from "./components/AboutPage";
 import TokenPage from "./components/TokenPage";
+import NotFoundPage from "./components/NotFoundPage";
 import Header from "./components/Common/Header";
+import { Route, Switch, Redirect } from "react-router-dom";
 
 import "./App.css";
 
+// import { Card } from '@material-ui/core/Card';
+// import { CardActions } from "@material-ui/core/CardActions";
+// import { CardContent } from "@material-ui/core/CardContent";
+// import { CardMedia } from "@material-ui/core/CardMedia";
+// import { Typography } from "@material-ui/core/Typography";
+// import { Button } from "@material-ui/core/Button";
+// // import { Grid } from "@material-ui/core";
+// import { Icon } from "@material-ui/core/Icon";
+
 function App() {
-  function getPage() {
-    const route = window.location.pathname;
-    if(route === "/About") return <AboutPage />;
-    else if(route === "/Token") return <TokenPage />;
-    return <HomePage />;
-  }
+  
   return (
     <div className="container-fluid">
       <Header />
-      {getPage()}
+      <Switch>
+        <Route path="/" exact component={HomePage}/>
+        <Route path="/About" component={AboutPage}/>
+        <Route path="/Token" component={TokenPage}/>
+        <Redirect from="/about-page" to="About"/>
+        <Route path="/" component={NotFoundPage}/>
+      </Switch>
     </div>
   );
 }
@@ -27,9 +39,26 @@ export default App;
 
 
 
+// function getPage() {
+//   const route = window.location.pathname;
+//   if(route === "/About") return <AboutPage />;
+//   else if(route === "/Token") return <TokenPage />;
+//   return <HomePage />;
+// }
 
-
-
+// package.json edit
+// {
+//   "name": "client",
+//   "version": "0.1.0",
+//   "private": true,
+//   "dependencies": {
+//     "bootstrap": "^4.3.1",
+//     "flux": "^4.0.1",
+//     "react": "^18.0.0-alpha-ed6c091fe-20210701",
+//     "react-dom": "^18.0.0-alpha-ed6c091fe-20210701",
+//     "react-router-dom": "^5.0.0",
+//     "react-scripts": "3.2.0",
+//     "web3": "1.2.2"
 
 
 
