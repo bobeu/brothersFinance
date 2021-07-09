@@ -2,11 +2,12 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 import React from 'react';
 import HomePage from "./components/HomePage";
-import AboutPage from "./components/AboutPage";
+import Transfer from "./components/Transfer";
 import TokenPage from "./components/TokenPage";
 import NotFoundPage from "./components/NotFoundPage";
 import Header from "./components/Common/Header";
 import { Route, Switch, Redirect } from "react-router-dom";
+import MarkUpTokenInfo from "./components/MarkUpTokenInfo";
 
 import "./App.css";
 
@@ -26,9 +27,10 @@ function App() {
       <Header />
       <Switch>
         <Route path="/" exact component={HomePage}/>
-        <Route path="/About" component={AboutPage}/>
+        <Route path="/Transfer" component={Transfer}/>
+        <Route path="/markUp" component={MarkUpTokenInfo}/>
         <Route path="/Token" component={TokenPage}/>
-        <Redirect from="/about-page" to="About"/>
+        <Redirect from="/about-page" to="/"/>
         <Route path="/" component={NotFoundPage}/>
       </Switch>
     </div>

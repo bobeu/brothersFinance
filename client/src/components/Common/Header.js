@@ -7,7 +7,7 @@ function Header () {
         <nav>
             <NavLink activeStyle={active_Style} to="/" exact >Home</NavLink>
             {" | "} 
-            <NavLink activeStyle={active_Style} to='/About'>About</NavLink>
+            <NavLink activeStyle={active_Style} to='/Transfer'>Transfer</NavLink>
             {" | "} 
             <NavLink activeStyle={active_Style} to='/Token'>Token</NavLink>
         </nav>

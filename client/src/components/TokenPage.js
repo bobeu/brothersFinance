@@ -3,10 +3,11 @@ import SafeBROsToken from "../contracts/SafeBROsToken.json";
 import getWeb3 from "../getWeb3";
 import MarkUpTokenInfo from "./MarkUpTokenInfo";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { Prompt, Link } from 'react-router-dom';
 
 
 function TokenPage() {
-  const [[listOf, token], setListOf] = useState([
+  const [listOf, setListOf] = useState([
     {
       storageValue: 0,
       c_address: null,
@@ -16,13 +17,8 @@ function TokenPage() {
       name_: "",
       symbol: "", 
       Decimal: 0, 
-      userBalance: 0
-    }, {
-      _name: "",
-      symbol: "",
-      decimal: 0,
-      totalSupply: 0,
-      contract_address: null
+      userBalance: 0,
+      token: null
     }
   ]);
 
@@ -34,6 +30,7 @@ function TokenPage() {
     try {
       // Get network provider and web3 instance.
       const web3 = await getWeb3();
+      // console.log(web3);
 
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
@@ -43,38 +40,38 @@ function TokenPage() {
       const deployedNetwork = SafeBROsToken.networks[networkId];
       const instance = new web3.eth.Contract(SafeBROsToken.abi, deployedNetwork.address);
       const contractAddress = deployedNetwork.address;
+      const nam = await instance.methods.name().call();
+      const sym = await instance.methods.symbol().call();
+      const Dec = await instance.methods.decimals().call();
+      const userBal = await instance.methods.balanceOf(accounts[0]).call();
+      const total_s = await instance.methods.totalSupply().call();
+      // const bal = web3.eth.getBalance();
       
       // Set web3, accounts, and contract to the state, and then proceed with an
-      // example of interacting with the contract's methods.
-      const c_address= contractAddress;
-      const web3_ = web3;
-      const name_ = await instance.methods.name().call();
-      const symbol = await instance.methods.symbol().call();
-      const Decimal = await instance.methods.decimals().call();
-      const storageValue = await instance.methods.totalSupply().call();
-      const userBalance = await instance.methods.balanceOf(accounts[0]).call();
-      const accounts_= accounts; 
-      const contract_ = instance; 
-
+      // example of interacting with the contract's methods
       setListOf(
         {
-          storageValue: storageValue,
-          c_address: c_address,
-          web3: web3_,
-          accounts: accounts_,
-          contract: contract_,
-          name_: name_,
-          symbol: symbol,
-          Decimal: Decimal,
-          userBalance: userBalance
-      }, {
-        _name: name_,
-        symbol: symbol,
-        decimal: Decimal,
-        totalSupply: storageValue,
-        contract_address: c_address
+          storageValue: total_s,
+          c_address: contractAddress,
+          web3: web3,
+          accounts: accounts,
+          contract: instance,
+          name_: nam,
+          symbol: sym,
+          Decimal: Dec,
+          userBalance: userBal,
+          token: [
+            nam,
+            sym,
+            Dec,
+            total_s,
+            contractAddress
+          ]
       });
-      console.log(listOf, token);
+      // console.log(web3);/
+      // console.log(web3.BatchRequest());
+
+
       } catch (error) {
         // Catch any errors for any of the above operations.
         alert(
@@ -88,7 +85,10 @@ function TokenPage() {
   //   return <div>Loading Web3, accounts, and contract...</div>;
   // }
     return (
-      MarkUpTokenInfo(listOf, token)
+      <>
+        <Prompt when={true} message="Are you sure you want to exit?"></Prompt>
+        {MarkUpTokenInfo(listOf)}
+      </>
     );
   }
   
