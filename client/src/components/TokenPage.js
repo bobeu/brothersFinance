@@ -6,7 +6,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 
 function TokenPage() {
-  const [listOf, setListOf] = useState([
+  const [[listOf, token], setListOf] = useState([
     {
       storageValue: 0,
       c_address: null,
@@ -17,7 +17,13 @@ function TokenPage() {
       symbol: "", 
       Decimal: 0, 
       userBalance: 0
-    },
+    }, {
+      _name: "",
+      symbol: "",
+      decimal: 0,
+      totalSupply: 0,
+      contract_address: null
+    }
   ]);
 
   useEffect(() => {
@@ -61,8 +67,14 @@ function TokenPage() {
           symbol: symbol,
           Decimal: Decimal,
           userBalance: userBalance
+      }, {
+        _name: name_,
+        symbol: symbol,
+        decimal: Decimal,
+        totalSupply: storageValue,
+        contract_address: c_address
       });
-      console.log(listOf);
+      console.log(listOf, token);
       } catch (error) {
         // Catch any errors for any of the above operations.
         alert(
@@ -76,7 +88,7 @@ function TokenPage() {
   //   return <div>Loading Web3, accounts, and contract...</div>;
   // }
     return (
-      MarkUpTokenInfo(listOf)
+      MarkUpTokenInfo(listOf, token)
     );
   }
   
