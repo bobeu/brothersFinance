@@ -1,10 +1,9 @@
 import React, {useEffect, useState} from "react";
-import SafeBROsToken from "../contracts/SafeBROsToken.json";
 import getWeb3 from "../getWeb3";
 import MarkUpTokenInfo from "./MarkUpTokenInfo";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Prompt, Link } from 'react-router-dom';
-
+import SafeBROsToken from "../contracts/SafeBROsToken.json";
 
 function TokenPage() {
   const [listOf, setListOf] = useState([
@@ -28,9 +27,7 @@ function TokenPage() {
 
   const getListOf = async () => {
     try {
-      // Get network provider and web3 instance.
       const web3 = await getWeb3();
-      // console.log(web3);
 
       // Use web3 to get the user's accounts.
       const accounts = await web3.eth.getAccounts();
@@ -38,8 +35,11 @@ function TokenPage() {
       // Get the contract instance and contract address.
       const networkId = await web3.eth.net.getId();
       const deployedNetwork = SafeBROsToken.networks[networkId];
-      const instance = new web3.eth.Contract(SafeBROsToken.abi, deployedNetwork.address);
       const contractAddress = deployedNetwork.address;
+      const instance = new web3.eth.Contract(SafeBROsToken.abi, contractAddress);
+      console.log(deployedNetwork.address);
+      console.log(instance);
+
       const nam = await instance.methods.name().call();
       const sym = await instance.methods.symbol().call();
       const Dec = await instance.methods.decimals().call();
@@ -86,6 +86,7 @@ function TokenPage() {
   // }
     return (
       <>
+        <Link className="btn btn-primary" to="Transfer">Transfer Token</Link>
         <Prompt when={true} message="Are you sure you want to exit?"></Prompt>
         {MarkUpTokenInfo(listOf)}
       </>
