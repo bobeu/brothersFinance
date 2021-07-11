@@ -37,8 +37,8 @@ function TokenPage() {
       const deployedNetwork = SafeBROsToken.networks[networkId];
       const contractAddress = deployedNetwork.address;
       const instance = new web3.eth.Contract(SafeBROsToken.abi, contractAddress);
-      console.log(deployedNetwork.address);
-      console.log(instance);
+      // console.log(deployedNetwork.address);
+      // console.log(instance);
 
       const nam = await instance.methods.name().call();
       const sym = await instance.methods.symbol().call();
