@@ -8,6 +8,7 @@ import NotFoundPage from "./components/NotFoundPage";
 import Header from "./components/Common/Header";
 import { Route, Switch, Redirect } from "react-router-dom";
 import MarkUpTokenInfo from "./components/MarkUpTokenInfo";
+import TextInput from "./components/Common/TextInput";
 
 import "./App.css";
 
@@ -27,7 +28,7 @@ function App() {
       <Header />
       <Switch>
         <Route path="/" exact component={HomePage}/>
-        <Route path="/Transfer" component={Transfer}/>
+        <Route path="/Transfer" component={TextInput}/>
         <Route path="/markUp" component={MarkUpTokenInfo}/>
         <Route path="/Token" component={TokenPage}/>
         <Redirect from="/about-page" to="/"/>
