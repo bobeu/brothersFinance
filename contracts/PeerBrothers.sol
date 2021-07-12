@@ -191,6 +191,7 @@ contract PeerBrothers is Ownable, Periphery{
             for(uint8 i=0; i<n; i++) {
                 address each = g.adminIndexed[s][n].addr;
                 exist[each] = false;
+                upline[each] = address(0);
                 delete g.adminIndexed[s][n];
                 delete g.ids[s][each];
                 n -= 1;
@@ -239,6 +240,7 @@ contract PeerBrothers is Ownable, Periphery{
             isAPeerBrother[s] = true;
             peerGroupCount = peerGroupCount.add(1);
             exist[s] = true;
+            upline[s] = _msgSender();
             if(allGrpCount == 0) {
                 g.groupNum = peerGroupCount;
             } else {
@@ -294,6 +296,7 @@ contract PeerBrothers is Ownable, Periphery{
             g.payments[a].actualPoolSize += remittance;
             g.ids[a][p] = ap;
             exist[p] = true;
+            upline[a] = p;
             peerInfo[a].iterator ++;
 
             emit Deposit(p, remittance);
@@ -395,11 +398,13 @@ contract PeerBrothers is Ownable, Periphery{
     }
     
     function _liquidate(address adm) internal {
+        address p = _msgSender();
         PeerInfo storage g = peerInfo[adm];
         uint8 pos = g.iterator;
         address c_beneficiary = g.adminIndexed[adm][pos + 1].addr;
         peerLedger[c_beneficiary] = 0;
         exist[_msgSender()] = false;
+        upline[p] = address(0); 
         g.adminIndexed[adm][pos + 1].addr = address(0);
     }
 
