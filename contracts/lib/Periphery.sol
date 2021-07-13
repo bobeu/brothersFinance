@@ -18,6 +18,8 @@ contract Periphery is Context {
     
     mapping(address => bool) public isAdmin;
 
+    mapping(address => address) public upline; //Gets a peerGroup administrator. Needed in the frontend
+
 
     modifier onlyRole {
         require(isAdmin[_msgSender()], 'Not Authorized');
