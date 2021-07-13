@@ -29,7 +29,7 @@ function App() {
       <Switch>
         <Route path="/" exact component={HomePage}/>
         <Route path="/Transfer" component={TextInput}/>
-        <Route path="/markUp" component={MarkUpTokenInfo}/>
+        {/* <Route path="/markUp" component={MarkUpTokenInfo}/> */}
         <Route path="/Token" component={TokenPage}/>
         <Redirect from="/about-page" to="/"/>
         <Route path="/" component={NotFoundPage}/>
