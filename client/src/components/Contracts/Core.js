@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PeerBrothers from "../../../../build/contracts/PeerBrothers.json";
 import getWeb3 from "../../getWeb3";
 
@@ -33,8 +33,12 @@ const Core = () => {
             getCurrentBlockNumber: null,
             getDebtbalance: null
         });
+    
+useEffect(() => {
+    getCore();
+}, []);
 
-    const getListOf = async () => {
+    const getCore = async () => {
         try {
           const web3 = await getWeb3();
     

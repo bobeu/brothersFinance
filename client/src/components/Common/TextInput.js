@@ -23,11 +23,12 @@ function TextInput() {
     const handleFormSubmit = (event) => {
         event.preventDefault();
         setErrors(Validation(params));
-        return (
-            <div>
-                <Transfer params={params}/>
-            </div>
-        );
+        Transfer(params);
+        // return (
+        //     <div>
+        //         <Transfer params={params}/>
+        //     </div>
+        // );
         // console.log(params, event);
     }
     // onSubmit={handleSubmit}

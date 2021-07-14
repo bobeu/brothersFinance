@@ -1,15 +1,13 @@
-import React from "react";
-import UserPage from "../UserPage";
+// import React from "react";
+// import UserPage from "../UserPage";
 
-const ConnectWallet = () => {
+// const ConnectWallet = () => {
 
-    return(
-        <div className="Button">
-            <button className="btn btn-primary" onClick={UserPage}>
-                <h3>Connect Wallet</h3>
-            </button>
-        </div>
-    )
-};
+//     return(
+//         <div className="Button">
+            
+//         </div>
+//     )
+// };
 
-export default ConnectWallet;
+// export default ConnectWallet;
