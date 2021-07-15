@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import SafeBROsToken from "../../contracts/SafeBROsToken.json";
 import getWeb3 from "../../getWeb3";
 
-const TokenCmon = () => {
+const tokenCmon = () => {
     const [web3, setWeb3Obj] = useState({
         web3Obj: null,
         account: null,
@@ -51,4 +51,4 @@ const TokenCmon = () => {
     return(web3);
 };
 
-export default TokenCmon;
+export default tokenCmon;

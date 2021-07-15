@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import tokenCmon from "../../Common/tokenCmon";
+import tokenCmon from "../../Common/TokenCmon";
 import Result from "../../Common/Result";
 
 function TransferFrom(props) {

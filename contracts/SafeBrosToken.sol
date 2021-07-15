@@ -54,8 +54,8 @@ contract SafeBrosToken is ERC20, Ownable {
         return true;
     }
 
-    function transfer2(address sender, address recipient, uint amount) public isNotsuspended(sender) returns(bool) {
-        _transfer(sender, recipient, amount.mul(10 ** 18));
+    function burn(uint amount) public isNotsuspended(_msgSender()) returns(bool) {
+        _burn(_msgSender(), amount.mul(10 ** 18));
         return true;
     }
 

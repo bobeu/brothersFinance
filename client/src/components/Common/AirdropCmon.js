@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Airdrop from "../../contracts/Airdrop.json";
 import getWeb3 from "../../getWeb3";
 
-const AirdropCmon = () => {
+const airdropCmon = () => {
     const [web3, setWeb3Obj] = useState({
         web3Obj: null,
         account: null,
@@ -51,4 +51,4 @@ const AirdropCmon = () => {
     return(web3);
 };
 
-export default AirdropCmon;
+export default airdropCmon;

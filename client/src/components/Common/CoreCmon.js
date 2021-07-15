@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import PeerBrothers from "../../contracts/PeerBrothers.json";
 import getWeb3 from "../../getWeb3";
 
-const CoreCmon = () => {
+const coreCmon = () => {
     const [web3, setWeb3Obj] = useState({
         web3Obj: null,
         account: null,
@@ -51,4 +51,4 @@ const CoreCmon = () => {
     return(web3);
 };
 
-export default CoreCmon;
+export default coreCmon;

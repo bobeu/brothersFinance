@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import tokenCmon from "../../Common/tokenCmon";
+import tokenCmon from "../../Common/TokenCmon";
 import Result from "../../Common/Result";
 
 function IncreaseAllowance(props) {
@@ -17,7 +17,7 @@ function IncreaseAllowance(props) {
                 try{
                     const web3 = tokenCmon();
                     const account = await web3.account;
-                    const result = await web3.contract_instance.methods.increaseAllowance(props.target).send({from: account});
+                    const result = await web3.contract_instance.methods.increaseAllowance(props.targ, props.val).send({from: account});
                     resolve(result);
                   
 
