@@ -6,7 +6,7 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 import './SafeBrosToken.sol';
-import './lib/Periphery.sol';
+import './lib/Slice.sol';
 
 
 interface BUSD {
@@ -17,7 +17,7 @@ interface BUSD {
 }
 
 
-contract PeerBrothers is Ownable, Periphery{
+contract PeerBrothers is Ownable, Slice{
 
     using SafeMath for uint256;
     

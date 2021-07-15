@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "openzeppelin-solidity/contracts/utils/Context.sol";
 
-contract Periphery is Context {
+contract Slice is Context {
 
     enum Status { Zeroed, WaitListed, Approved, Claimed }
 

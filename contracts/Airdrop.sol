@@ -6,9 +6,9 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
 
 import './SafeBrosToken.sol';
-import './lib/Periphery.sol';
+import './lib/Slice.sol';
 
-contract Airdrop is Ownable, Periphery{
+contract Airdrop is Ownable, Slice{
 
     using SafeMath for uint256;
 
@@ -135,7 +135,7 @@ contract Airdrop is Ownable, Periphery{
         
         if(airdropBalance.sub(claimable) > 0){
             totalClaimants += 1;
-            token.transfer2(address(this), _msgSender(), claimable);
+            token._transfer(address(this), _msgSender(), claimable);
             airdrops[airdropId].users[_msgSender()]._status = Status.Claimed;
             airdrops[airdropId].totalClaimed += claimable;
             airdrops[airdropId].poolBalance -= claimable;
@@ -147,5 +147,21 @@ contract Airdrop is Ownable, Periphery{
             revert("Airdrop closed");
         }
         return true;
+    }
+
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override { }
+
+    function _transfer(address sender, address recipient, uint256 amount) internal override {
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");
+
+        _beforeTokenTransfer(sender, recipient, amount);
+
+        uint256 senderBalance = balanceOf(sender);
+        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
+        _balances[sender] = senderBalance - amount;
+        _balances[recipient] += amount;
+
+        emit Transfer(sender, recipient, amount);
     }
 }
