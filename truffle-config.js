@@ -4,8 +4,7 @@ const path = require("path");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 // require("dotenv").config();
 
-const mnemonic = 'tourist lion vintage width accident horror pistol pave defy category light mixed'
-// 'tourist lion vintage width ............'; //Replace with your secret key and run
+const mnemonic = 'tourist lion vintage width ............'; //Replace with your secret key and run
                                                                         // truffle migrate --reset --network testnet
 
 module.exports = {

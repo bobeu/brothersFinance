@@ -2,7 +2,7 @@ import React, { DocumentType } from "react";
 import { Link } from "react-router-dom";
 import UserPage from "./UserPage";
 import { Button, Card, Form, InputGroup} from "react-bootstrap";
-import Navbar from "./Common/Navbar";
+
 import "bootstrap/dist/css/bootstrap.min.css";
 // import ConnectWallet from "./Common/ConnectWallet";
 
@@ -13,9 +13,34 @@ function HomePage() {
     }
     return (
         <>
-        <div>
-            <Navbar/>
-        </div>,
+            <nav className="navbar navbar-expand-lg bg-secondary navbar-dark">
+                <div className="container">
+                    <a href="#" className="navbar-brand">HomePage</a>
+                    <Button
+                        className="navbar-toggler" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#navmenu"
+                        >
+                        <span className="navbar-toggler-icon"></span>
+                    </Button>
+
+                    <div className="collapse navbar-collapse" id="navmenu">
+                        <ul className="navbar-nav ms-auto">
+                            <li className="nav-item">
+                                <a href="#" className="nav-link">PeerBrothers</a>
+                            </li>
+                            <li className="nav-item">
+                                <a href="#" className="nav-link">Airdrop</a>
+                            </li>
+                            <li className="nav-item">
+                                <a href="#" className="nav-link">Token</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
             <div>
                 <div>
                     <h3>Welcome to PeerFinance</h3>
@@ -27,7 +52,9 @@ function HomePage() {
                     <div className="card shadow">
                         <div className="card-body">
                             <Button type="button">Search</Button>
-                            <input className="" placeholder="aaa"/>
+                            <Form >
+                                
+                            </Form>
                         </div>
                     </div>
                 </section>

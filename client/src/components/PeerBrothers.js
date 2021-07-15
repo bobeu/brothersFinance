@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AirdropCmon from "./Common/AirdropCmon";
 import CoreCmon from "./Common/CoreCmon";
-import TokenCmon from "./Common/TokenCmon";
+import TokenCmon from "./Common/tokenCmon";
 
 const PeerBrothers = () => {
     const [objs_, _init_] = useState({});

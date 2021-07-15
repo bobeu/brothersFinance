@@ -1,68 +1,77 @@
 import React from "react";
 import { useState } from  "react";
-// import PropTypes from 'prop-types';
-import Transfer from "../Transfer";
-import Validation from "./Validation";
+import { Button } from "react-bootstrap";
+import Validate from "./Validate";
 
 function TextInput() {
-    const [errors, setErrors] = useState({});
+    let errors = {};
     const [ params, setParams ] = useState({
         address: "",
         amount: 0,
     });
 
-
-     const handleChange = (event) => {
+    function onInputChange(event) {
         event.preventDefault();
         setParams({
             ...params, 
-            [event.target.name]: event.target.value 
+            [event.target.name]: event.target.value,
         });
     }
 
-    const handleFormSubmit = (event) => {
+    function handleFormSubmit(event) {
         event.preventDefault();
-        setErrors(Validation(params));
-        Transfer(params);
-        // return (
-        //     <div>
-        //         <Transfer params={params}/>
-        //     </div>
-        // );
-        // console.log(params, event);
-    }
+        if(!params.address && !params.amount) {
+            if(!params.address || params.address.length < 42 || params.address.length > 42) {
+                errors.address = "Invalid address.";
+            }
+            if(params.amount === 0) {
+                errors.amount="Amount should be greater than 0 ";
+    
+            }
+            return false;
+        } else if(params.address.length === 42 && params.amount > 0) {
+            Validate(params);
+        }
+        
+    };
     // onSubmit={handleSubmit}
     return(
         <div>
-            <div>
-            <h3 className="container">Transfer</h3>
+              <div>
+                <h3 className="container">Transfer</h3>
             </div>
-            
             <div>
-                <form className="form-wrapper">
-                    <div className="container">
-                        <input 
-                            className="input" 
-                            type="text" 
-                            placeholder='Recipient Address' 
-                            name="address" 
-                            value={params.address} 
-                            onChange={handleChange} 
-                            />
-                            {errors.address && <p className="error">{errors.address}</p>}
+                <form> {/*className="form-wrapper"*/}
+                    <div className="form-group">
+                        <label htmlFor="address">Recipient</label>
+                        <div className="field">
+                            <input
+                                id="address"
+                                type="text" 
+                                onChange={onInputChange} 
+                                placeholder='address' 
+                                name="address" 
+                                className="form-control" 
+                                value={params.address} 
+                                />
+                                {errors.address && <p className="error">{errors.address}</p>}
+                        </div>
                     </div>
-                    <div className="container">
+
+                    <div className="form-group">
+                        <label htmlFor="amount">Amount</label>
                         <input
-                            className="input"
-                            type="number"  
-                            placeholder='Value' 
+                            id="amount"
                             name="amount" 
+                            onChange={onInputChange} 
                             value={params.amount}
-                            onChange={handleChange} 
+                            type="number"
+                            className="form-control"
+                            placeholder='Value' 
                             />
                             {errors.amount && <p className="error">{errors.amount}</p>}
                     </div>
-                    <div className="container"><button className="submit" className="btn btn-primary" onClick={handleFormSubmit}>Send Transaction</button></div>
+                    <div><button className="submit" className="btn btn-primary" onClick={handleFormSubmit}>Send Transaction</button></div>
                 </form>,
             </div>
             {/* {Transfer(params)} */}
