@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import getWeb3 from "../getWeb3";
-// import MarkUpTokenInfo from "./MarkUpTokenInfo";
-// import "bootstrap/dist/css/bootstrap.min.css";
+import MarkUpTokenInfo from "./MarkUpTokenInfo";
+import "bootstrap/dist/css/bootstrap.min.css";
 import { Prompt, Link } from 'react-router-dom';
 import SafeBROsToken from "../contracts/SafeBROsToken.json";
 
@@ -37,8 +37,8 @@ function TokenPage() {
       const deployedNetwork = SafeBROsToken.networks[networkId];
       const contractAddress = deployedNetwork.address;
       const instance = new web3.eth.Contract(SafeBROsToken.abi, contractAddress);
-      // console.log(deployedNetwork.address);
-      // console.log(instance);
+      console.log(deployedNetwork.address);
+      console.log(instance);
 
       const nam = await instance.methods.name().call();
       const sym = await instance.methods.symbol().call();
@@ -88,7 +88,7 @@ function TokenPage() {
       <>
         <Link className="btn btn-primary" to="Transfer">Transfer Token</Link>
         <Prompt when={true} message="Are you sure you want to exit?"></Prompt>
-        {/* {MarkUpTokenInfo(listOf)} */}
+        {MarkUpTokenInfo(listOf)}
       </>
     );
   }

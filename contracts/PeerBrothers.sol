@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./lib/Ownable.sol";
-import "./lib/SafeMath.sol";
+import "lib/Ownable.sol";
+import "lib/SafeMath.sol";
 
 import './SafeBEP20.sol';
-import './lib/Slice.sol';
+import 'lib/Slice.sol';
 
 
 interface BUSD {

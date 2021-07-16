@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import './interfaces/IBEP20.sol';
-import './interfaces/IBEP20Metadata.sol';
-import './lib/Context.sol';
-import './lib/SafeMath.sol';
-import './lib/Ownable.sol';
+import 'interfaces/IBEP20.sol';
+import 'interfaces/IBEP20Metadata.sol';
+import 'lib/Context.sol';
+import 'lib/SafeMath.sol';
+import 'lib/Ownable.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.

@@ -1,7 +1,6 @@
 {
   "name": "brothersFinance",
   "version": "1.0.0",
-  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -21,5 +20,15 @@
     "@truffle/hdwallet-provider": "^1.4.1",
     "openzeppelin-solidity": "^4.1.0",
     "web3": "^1.4.0"
-  }
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "test",
+    "contracts": "contracts",
+    "interfaces": "interfaces",
+    "migrations": "migrations",
+    "commom": "common"
+  },
+  "devDependencies": {},
+  "description": ""
 }

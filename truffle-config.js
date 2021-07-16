@@ -1,5 +1,5 @@
 
-const { enabled } = require("debug");
+const { disable } = require("debug");
 const path = require("path");
 const HDWalletProvider = require("@truffle/hdwallet-provider");
 // require("dotenv").config();
