@@ -9,7 +9,7 @@ import "./IBEP20.sol";
  *
  * _Available since v4.1._
  */
-interface IERC20Metadata is IERC20 {
+interface IERC20Metadata is IBEP20 {
     /**
      * @dev Returns the name of the token.
      */

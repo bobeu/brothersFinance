@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "./lib/Ownable.sol";
+import "./lib/SafeMath.sol";
 
-import './SafeBrosToken.sol';
+import './SafeBEP20.sol';
 import './lib/Slice.sol';
 
 
@@ -27,7 +27,7 @@ contract PeerBrothers is Ownable, Slice{
 
     event PenaltyChanged(address bigBro, uint newRate);
     
-    SafeBrosToken _token;
+    SafeBEP20 _token;
     
     // BUSD stable_t;
     
@@ -80,17 +80,7 @@ contract PeerBrothers is Ownable, Slice{
         uint credit;
     }
     
-        
     mapping(address => PeerInfo) public peerInfo;
-    
-    // mapping(address => bool) private exist;
-        
-    // mapping(address => bool) public isAPeerBrother;
-    
-    // mapping(address => uint) private peerLedger;
-    
-    // mapping(address => bool) public isAdmin;
-        
     
     modifier isTied(address adm) {
         require(adm != address(0), 'Admin: Zero address disallowed');
@@ -101,7 +91,7 @@ contract PeerBrothers is Ownable, Slice{
         _;
     }
 
-    constructor(SafeBrosToken _sToken) {
+    constructor(SafeBEP20 _sToken) {
         isAdmin[_msgSender()] = true;
         _token = _sToken;
     }
@@ -111,11 +101,7 @@ contract PeerBrothers is Ownable, Slice{
         if(msg.value < 1e17 wei) revert();
     }
     
-    // function getUsersFigure() public view onlyRole returns(uint) {
-    //     return onCompletion.length;
-    // }
-
-    function setRole(address _newRole, bool any) public onlyOwner returns(bool) {
+    function setRole(address _newRole, bool any) public PRIVATE returns(bool) {
         if(any){
             require(!isAdmin[_newRole], 'Already an admin');
             isAdmin[_newRole] = true;
@@ -143,7 +129,7 @@ contract PeerBrothers is Ownable, Slice{
         return groupStatus;
     } 
     
-    function changePeerActivityStatus(bool state) public onlyOwner returns(bool) {
+    function changePeerActivityStatus(bool state) public PRIVATE returns(bool) {
         if(!state){
             require(groupStatus, 'Already inactive');
             groupStatus = false;

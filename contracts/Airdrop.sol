@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./lib/Ownable.sol";
-import "./lib/SafeMath.sol";
+import ".lib/Ownable.sol";
+import ".lib/SafeMath.sol";
 
 import './SafeBEP20.sol';
-import './lib/Slice.sol';
+import '.lib/Slice.sol';
 
 contract Airdrop is Ownable, Slice{
 
@@ -49,7 +49,7 @@ contract Airdrop is Ownable, Slice{
     mapping(uint8 => AirdropInfo) public airdrops;
     
 
-    constructor (SafeBrosToken _token) {
+    constructor (SafeBEP20 _token) {
         token = _token;
     }
 
@@ -135,7 +135,7 @@ contract Airdrop is Ownable, Slice{
         
         if(airdropBalance.sub(claimable) > 0){
             totalClaimants += 1;
-            token._transfer(address(this), _msgSender(), claimable);
+            token.transfer_(address(this), _msgSender(), claimable);
             airdrops[airdropId].users[_msgSender()]._status = Status.Claimed;
             airdrops[airdropId].totalClaimed += claimable;
             airdrops[airdropId].poolBalance -= claimable;
@@ -149,6 +149,6 @@ contract Airdrop is Ownable, Slice{
         return true;
     }
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal override { }
+    function _beforeTokenTransfer(address from, address to, uint256 amount) internal { }
     
     }

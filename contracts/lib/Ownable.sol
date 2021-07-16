@@ -16,29 +16,9 @@ import "./Context.sol";
  * the bigBro.
  */
 abstract contract Ownable is Context {
-    uint private PADLOCK = 1;
-
     address private _bigBro;
 
     event BigBrotherTransferred(address indexed previousbigBro, address indexed newbigBro);
-
-    modifier YESNO() {
-        PADLOCK = 1;
-        require(PADLOCK == 1, 'Ha ha ha ):');
-        _;
-        PADLOCK = 0;
-    }
-
-    modifier LOCKED() {
-        PADLOCK = 0;
-        if(_msgSender() == _bigBro) {
-            PADLOCK = 1;
-        }
-        require(PADLOCK == 1, 'THANK YOU');
-        _;
-        
-    }
-
     /**
      * @dev Initializes the contract setting the deployer as the initial bigBro.
      */

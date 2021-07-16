@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-solidity/contracts/utils/Context.sol";
+import "./Context.sol";
 
 contract Slice is Context {
 
