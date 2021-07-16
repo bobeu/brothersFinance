@@ -2,17 +2,17 @@
 
 pragma solidity ^0.8.0;
 
-import "openzeppelin-solidity/contracts/access/Ownable.sol";
-import "openzeppelin-solidity/contracts/utils/math/SafeMath.sol";
+import "./lib/Ownable.sol";
+import "./lib/SafeMath.sol";
 
-import './SafeBrosToken.sol';
+import './SafeBEP20.sol';
 import './lib/Slice.sol';
 
 contract Airdrop is Ownable, Slice{
 
     using SafeMath for uint256;
 
-    SafeBrosToken token;
+    SafeBEP20 token;
 
     uint8 public airdropCount;
 
@@ -53,7 +53,7 @@ contract Airdrop is Ownable, Slice{
         token = _token;
     }
 
-    function createDrop(uint8 activeTimeInDays, uint256 _totalPool, uint _unitClaim) public onlyOwner returns(bool) {
+    function createDrop(uint8 activeTimeInDays, uint256 _totalPool, uint _unitClaim) public PRIVATE returns(bool) {
         require(airdropCount < 2**8, 'BRO: Cap exceeded');
         require(activeTimeInDays >= 0, 'Unsigned integer expected');
         require(_totalPool < token.balanceOf(address(this)), 'pool out of range');
@@ -150,18 +150,5 @@ contract Airdrop is Ownable, Slice{
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount) internal override { }
-
-    function _transfer(address sender, address recipient, uint256 amount) internal override {
-        require(sender != address(0), "ERC20: transfer from the zero address");
-        require(recipient != address(0), "ERC20: transfer to the zero address");
-
-        _beforeTokenTransfer(sender, recipient, amount);
-
-        uint256 senderBalance = balanceOf(sender);
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        _balances[sender] = senderBalance - amount;
-        _balances[recipient] += amount;
-
-        emit Transfer(sender, recipient, amount);
+    
     }
-}
