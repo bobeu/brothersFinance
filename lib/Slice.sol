@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./Context.sol";
+import "lib/Context.sol";
 
 contract Slice is Context {
 

@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "lib/Ownable.sol";
 import "lib/SafeMath.sol";
 
-import './SafeBEP20.sol';
+import "contracts/SafeBEP20.sol";
 import "lib/Slice.sol";
 
 contract Airdrop is Ownable, Slice{
@@ -147,8 +147,6 @@ contract Airdrop is Ownable, Slice{
             revert("Airdrop closed");
         }
         return true;
-    }
+    }    
 
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal { }
-    
-    }
+}

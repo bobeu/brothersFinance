@@ -1,23 +1,40 @@
 import React, { useState } from "react";
-import AirdropCmon from "../../Common/AirdropCmon";
+import airdropCmon from "../../Common/airdropCmon";
+import React, { useState, useEffect } from "react";
+import Result from "../../Common/Result";
 
-const AirdropCount = (Web3) => {
-    const [counter, setCounter] = useState(counter = 0);
+function AirdropCount() {
+    const [ results, setErrors ] = useState({result_: Boolean,});
 
     useEffect(() => {
-        getFuncs();
-      }, []);
+        ( async () => {
+            exec();
+        })()
+    }, []);
+    
+    function exec() {
+        const s = new Promise(
+            async (resolve, reject) => {
+                try{
+                    const web3 = airdropCmon();
+                    const account = await web3.account;
+                    const result = await web3.contract_instance.methods.airdropCount().call({from: account});
+                    resolve(result);
+                  
 
-    const getFuncs = async () => {
-        const newer = await AirdropCmon.contract_instance.methods.airdropCount().call();
-        setCounter(counter = newer);
-    };
+                    setErrors({result_: result});
+                    
+                } catch (error) {
+                    reject(error);
+                }
+        })();
+    }
 
     return(
-        <div>
-            <h3 className="Counter">Total registered hunters: <span>{counter}</span></h3>
-        </div>
+        <Result results={results}/>
     );
-};
+}
+    
 
 export default AirdropCount;
+
